@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "897006572508",
+    "firebase_url": "https://nationaluptake.firebaseio.com",
+    "project_id": "nationaluptake",
+    "storage_bucket": "nationaluptake.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:897006572508:android:7bddd89ae170c2149ff519",
+        "android_client_info": {
+          "package_name": "com.oftencoft.nationaluptake"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "897006572508-atlo3gu1abhlt9pcetqmbsglub25csku.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBar_p8YzG18pUvN1vFnHH_3PoYdYKNFxg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "897006572508-atlo3gu1abhlt9pcetqmbsglub25csku.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
