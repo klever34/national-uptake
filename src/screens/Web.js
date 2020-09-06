@@ -7,13 +7,13 @@ import {
   Text,
   Image,
   Modal,
-  AsyncStorage,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
 import {ListItem, List} from 'native-base';
 import {WebView} from 'react-native-webview';
 import axios from 'axios';
+import AsyncStorage from '@react-native-community/async-storage';
 
 class Web extends React.Component {
   constructor(props) {
@@ -21,6 +21,8 @@ class Web extends React.Component {
     this.state = {
       showView: true,
       showTicket: false,
+      ticketData: null,
+      done: false
     };
   }
   componentDidMount() {}
@@ -32,7 +34,8 @@ class Web extends React.Component {
     const email = this.props.route.params.email;
     const amount = this.props.route.params.amount;
     const page = this.props.route.params.page;
-    console.log(page);
+    const reference = this.props.route.params.reference;
+    console.log(reference);
 
     const messageReceived = async (data) => {
       var webResponse = JSON.parse(data);
@@ -48,12 +51,12 @@ class Web extends React.Component {
           if (page == 'Pay') {
             setTimeout(() => {
               paymentValidationRef(reference.reference);
-            }, 7000);
+            }, 3000);
             return;
           } else {
             setTimeout(() => {
               paymentValidation(reference.reference);
-            }, 7000);
+            }, 10000);
           }
           break;
 
@@ -67,13 +70,15 @@ class Web extends React.Component {
         const token = await AsyncStorage.getItem('user_token');
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const response = await axios.get(
-          `http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com/api/transactions/invoice/${ref}`,
+          `https://dragonflyapi.nationaluptake.com//api/transactions/invoice/${ref}`,
         );
-
+        console.log("here");
+        console.log(response.data.data);
         this.setState({showView: true});
         this.setState({showTicket: true});
-        console.log(response.data);
-        console.log(JSON.stringify(response.data));
+        this.setState({ticketData: response.data.data});
+        // console.log("ticket data");
+        // console.log(this.state.ticketData);
       } catch (error) {
         console.log(error);
       }
@@ -84,14 +89,20 @@ class Web extends React.Component {
         const token = await AsyncStorage.getItem('user_token');
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         const response = await axios.get(
-          `http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com/api/transactions/invoice/${ref}`,
+          `https://dragonflyapi.nationaluptake.com//api/transactions/invoice/${ref}`,
         );
-
         this.props.navigation.navigate('Pay');
+
+        alert('Payment successful')
       } catch (error) {
-        console.log(error);
+        this.props.navigation.navigate('Pay');
+
       }
     };
+
+    const goToNext = () => {
+      this.props.navigation.navigate('Pay');
+    }
 
     const htm = `   
     <!DOCTYPE html>
@@ -116,12 +127,13 @@ class Web extends React.Component {
           <script>
             window.onload = payWithPaystack;
             function payWithPaystack(){
+              console.log("${reference} in pop up")
               var handler = PaystackPop.setup({
                 key: 'pk_test_84373cbbe24b24215e0fd67c1d9411c649734712',
                 email: '${email}',
                 amount: ${amount * 100},
                 currency: "NGN",
-                ref: ''+Math.floor((Math.random() * 1000000000) + 1), // generates a pseudo-unique reference. Please replace with a reference you generated. Or remove the line entirely so our API will generate one for you
+                ref: '${reference}', // generates a pseudo-unique reference. Please replace with a reference you generated. Or remove the line entirely so our API will generate one for you
                 metadata: {
                    custom_fields: [
                       {
@@ -147,7 +159,7 @@ class Web extends React.Component {
     </html> 
     `;
     if (this.state.showView) {
-      if (this.state.showTicket) {
+      if (this.state.showTicket && this.state.ticketData !==null) {
         return (
           <View style={{flex: 1, backgroundColor: '#fff', paddingTop: 20}}>
             <ScrollView
@@ -190,7 +202,7 @@ class Web extends React.Component {
                       alignItems: 'center',
                     }}>
                     <Image
-                      source={require('../assets/images/pic.png')}
+                      source={{uri: `${this.state.ticketData.draw.imageUrl}`}}
                       style={{height: 90, width: 90, borderRadius: 20}}
                     />
                     <View
@@ -205,7 +217,7 @@ class Web extends React.Component {
                           fontSize: 16,
                           color: '#273444',
                         }}>
-                        Soak up at the Lekki Resort{' '}
+                        {this.state.ticketData.draw.name}{' '}
                       </Text>
                       <Text
                         style={{
@@ -214,9 +226,9 @@ class Web extends React.Component {
                           color: '#273444',
                           // marginRight: 30
                         }}>
-                        The winner would be announced at the end of the draw
+                        {this.state.ticketData.draw.desc}
                       </Text>
-                      <TouchableOpacity
+                      {/* <TouchableOpacity
                         style={{
                           backgroundColor: '#c4c4c4',
                           borderRadius: 20,
@@ -233,7 +245,7 @@ class Web extends React.Component {
                           }}>
                           09:09:09
                         </Text>
-                      </TouchableOpacity>
+                      </TouchableOpacity> */}
                     </View>
                   </View>
                 </View>
@@ -261,7 +273,7 @@ class Web extends React.Component {
                       color: '#273444',
                       // marginRight: 30
                     }}>
-                    2 Entries
+                    {this.state.ticketData.userTickets.length} Entries
                   </Text>
                 </View>
                 <View
@@ -274,88 +286,50 @@ class Web extends React.Component {
                       elevation: 0,
                     },
                   ]}>
-                  <View
-                    style={{
-                      borderBottomColor: '#c4c4c4',
-                      borderBottomWidth: 0.5,
-                      paddingVertical: 15,
-                    }}>
+                  {this.state.ticketData.userTickets.map((item, i) => (
                     <View
+                    key={i}
                       style={{
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexDirection: 'row',
+                        borderBottomColor: '#c4c4c4',
+                        borderBottomWidth: 0.5,
+                        paddingVertical: 15,
                       }}>
+                      <View
+                        style={{
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          flexDirection: 'row',
+                        }}>
+                        <Text
+                          style={{
+                            fontFamily: 'ProximaNovaReg',
+                            fontSize: 14,
+                            color: '#273444',
+                            // marginRight: 30
+                          }}>
+                          Ticket No. {item.transactionReference}
+                        </Text>
+                        <Text
+                          style={{
+                            fontFamily: 'ProximaNovaReg',
+                            fontSize: 13,
+                            color: '#273444',
+                            // marginRight: 30
+                          }}>
+                          ₦{this.state.ticketData.draw.amount}
+                        </Text>
+                      </View>
                       <Text
                         style={{
-                          fontFamily: 'ProximaNovaReg',
-                          fontSize: 14,
+                          fontFamily: 'ProximaNovaThin',
+                          fontSize: 12,
                           color: '#273444',
                           // marginRight: 30
                         }}>
-                        Ticket No. TBST6251
-                      </Text>
-                      <Text
-                        style={{
-                          fontFamily: 'ProximaNovaReg',
-                          fontSize: 13,
-                          color: '#273444',
-                          // marginRight: 30
-                        }}>
-                        ₦1,000
+                        Reference ID. {item.ticketReference}
                       </Text>
                     </View>
-                    <Text
-                      style={{
-                        fontFamily: 'ProximaNovaThin',
-                        fontSize: 12,
-                        color: '#273444',
-                        // marginRight: 30
-                      }}>
-                      Reference ID. fhfueeyd73736483827dsshsnfs
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      borderBottomColor: '#c4c4c4',
-                      borderBottomWidth: 0.5,
-                      paddingVertical: 15,
-                    }}>
-                    <View
-                      style={{
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexDirection: 'row',
-                      }}>
-                      <Text
-                        style={{
-                          fontFamily: 'ProximaNovaReg',
-                          fontSize: 14,
-                          color: '#273444',
-                          // marginRight: 30
-                        }}>
-                        Ticket No. TBST6251
-                      </Text>
-                      <Text
-                        style={{
-                          fontFamily: 'ProximaNovaReg',
-                          fontSize: 13,
-                          color: '#273444',
-                          // marginRight: 30
-                        }}>
-                        ₦1,000
-                      </Text>
-                    </View>
-                    <Text
-                      style={{
-                        fontFamily: 'ProximaNovaThin',
-                        fontSize: 12,
-                        color: '#273444',
-                        // marginRight: 30
-                      }}>
-                      Reference ID. fhfueeyd73736483827dsshsnfs
-                    </Text>
-                  </View>
+                  ))}
                   <View
                     style={{
                       flexDirection: 'row',
@@ -379,7 +353,7 @@ class Web extends React.Component {
                         color: '#273444',
                         // marginRight: 30
                       }}>
-                      ₦2,000
+                      ₦{this.state.ticketData.totalAmount}
                     </Text>
                   </View>
                   <View
@@ -413,7 +387,7 @@ class Web extends React.Component {
                         color: '#273444',
                         // marginRight: 30
                       }}>
-                      Bammybestowed's referral code
+                      referral code
                     </Text>
                     <Text
                       style={{
@@ -422,7 +396,7 @@ class Web extends React.Component {
                         color: '#E24C4B',
                         // marginRight: 30
                       }}>
-                      - ₦200
+                      - ₦{this.state.ticketData.discount}
                     </Text>
                   </View>
                   <View
@@ -448,7 +422,7 @@ class Web extends React.Component {
                         color: '#35CF3B',
                         // marginRight: 30
                       }}>
-                      ₦1,800
+                      ₦{this.state.ticketData.totalAmount}
                     </Text>
                   </View>
                 </View>
@@ -477,6 +451,105 @@ class Web extends React.Component {
                     </Text>
                   </TouchableOpacity>
                 </View>
+                <Modal
+              animationType="slide"
+              transparent={true}
+              visible={this.state.done}
+              onRequestClose={() => {}}>
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                }}>
+                <View
+                  style={{
+                    marginTop: 70,
+                    // marginLeft: 20,
+                    // marginRight: 20,
+                    // borderWidth: 10,
+                    // borderColor: "white",
+                  }}>
+                  <View
+                    style={{
+                      alignSelf: 'center',
+                      backgroundColor: 'white',
+                      width: 375,
+                      borderRadius: 30,
+                    }}>
+                    <Image
+                      source={require('../assets/images/done.png')}
+                      resizeMode="contain"
+                      style={{
+                        position: 'relative',
+                        width: 72,
+                        height: 72,
+                        alignSelf: 'center',
+                        marginTop: 50,
+                      }}></Image>
+                    <View style={{marginTop: 30, alignSelf: 'center'}}>
+                      <Text
+                        style={{
+                          color: '#273444',
+                          textAlign: 'center',
+                          textAlignVertical: 'center',
+                          fontSize: 20,
+                          fontFamily: 'ProximaNovaSemiBold',
+                        }}>
+                        Congratulations
+                      </Text>
+                      <Text
+                        style={{
+                          color: '#273444',
+                          textAlign: 'center',
+                          textAlignVertical: 'center',
+                          marginTop: 20,
+                          marginLeft: 10,
+                          marginRight: 10,
+                          fontSize: 15,
+                          fontFamily: 'ProximaNovaReg',
+                          marginBottom: 10,
+                        }}>
+                        Your have successfully funded your credit bag.
+                      </Text>
+                      <View
+                        style={{
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginBottom: 50,
+                        }}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            this.goToNext();
+                          }}
+                          style={{
+                            backgroundColor: '#FF6161',
+                            borderRadius: 30,
+                            paddingVertical: 15,
+                            width: '90%',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginTop: 15,
+                            // opacity: 0.4,
+                          }}>
+                          <Text
+                            style={{
+                              color: 'white',
+                              textAlign: 'center',
+                              alignSelf: 'center',
+                              fontFamily: 'ProximaNovaReg',
+                            }}>
+                            Okay, got it!
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </Modal>
               </View>
             </ScrollView>
           </View>

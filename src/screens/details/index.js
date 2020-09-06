@@ -38,7 +38,7 @@ class Details extends Component {
       firstname: "",
       lastname: "",
       phonenumber: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -65,11 +65,6 @@ class Details extends Component {
     } catch (error) {}
   };
 
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
   async loginRequest() {
     this.setState({ Spinner: true });
 
@@ -166,12 +161,12 @@ class Details extends Component {
                   fontFamily: "ProximaNovaAltBold",
                   alignItems: "flex-start",
                   fontSize: 20,
-                  paddingHorizontal: 20,
-                  marginBottom: 15,
+                  paddingHorizontal: 30,
+                  marginVertical: 10,
                 },
               ]}
             >
-              Profile details
+              Edit profile details
             </Text>
             <View>
               <Item

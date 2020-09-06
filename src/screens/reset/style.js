@@ -5,7 +5,8 @@ const deviceWidth = Dimensions.get("window").width;
 
 export default {
   container: {
-    backgroundColor:"#FFF"
+    backgroundColor:"#FFF",
+    paddingTop: 30
   },
   imageContainer: {
     backgroundColor: '#FF5A5A',
@@ -73,5 +74,14 @@ export default {
     width: deviceWidth * 0.9,
     borderRadius: 100,
     textAlign: 'center'
+  },
+  card: {
+    elevation: 4,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    marginVertical: 10,
   },
 };

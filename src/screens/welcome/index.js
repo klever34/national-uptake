@@ -59,11 +59,7 @@ class Welcome extends Component {
   }
 
   async componentDidMount() {
-    let user = await AsyncStorage.getItem("userData");
     await AsyncStorage.setItem("@user_onboarded", 'true');
-    if (user) {
-      this.props.navigation.navigate("Available");
-    }
   }
 
   showAlert() {
@@ -224,7 +220,7 @@ class Welcome extends Component {
               <View style={{ justifyContent: "center", alignItems: "center" }}>
                 <TouchableOpacity
                   activeOpacity={0.8}
-                  onPress={() => this.props.navigation.navigate("Available")}
+                  onPress={() => this.props.navigation.push("Guest")}
                   style={{
                     borderColor: "#FF6161",
                     borderWidth: 2,

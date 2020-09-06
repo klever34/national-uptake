@@ -55,7 +55,7 @@ class Success extends Component {
       email: "",
       username: "",
       email: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -76,12 +76,6 @@ class Success extends Component {
 
   componentDidMount() {
     this.getToken();
-  }
-
-  componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
   }
 
   getToken = async () => {

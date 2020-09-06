@@ -72,7 +72,7 @@ class Enteries extends Component {
     this.state = {
       email: "",
       password: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -99,11 +99,6 @@ class Enteries extends Component {
     this.getToken();
   }
 
-  componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   getToken = async () => {
     try {
@@ -148,6 +143,26 @@ class Enteries extends Component {
         }.bind(this)
       );
   }
+
+  dateToFromNowDaily( myDate ) {
+
+    // get from-now for this date
+    var fromNow = Moment( myDate ).fromNow();
+
+    // ensure the date is displayed with today and yesterday
+    return Moment( myDate ).calendar( null, {
+        // when the date is closer, specify custom values
+        lastWeek: 'YYYY-MM-DD HH:mm:ss',
+        lastDay:  '[Yesterday]',
+        sameDay:  '[Today]',
+        nextDay:  '[Tomorrow]',
+        nextWeek: 'dddd',
+        // when the date is further away, use from-now functionality             
+        sameElse: function () {
+            return "[" + fromNow + "]";
+        }
+    });
+}
 
   async creditBag() {
     axios({

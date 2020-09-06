@@ -30,6 +30,7 @@ import {
   ScrollView,
   TouchableOpacity,
   BackHandler,
+  ActivityIndicator
 } from "react-native";
 
 import styles from "./style";
@@ -58,7 +59,7 @@ class History extends Component {
     this.state = {
       email: "",
       password: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -69,12 +70,8 @@ class History extends Component {
       credit: 0,
       history: [],
       now: "",
+      showView: false
     };
-  }
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-      this.props.navigation.goBack()
-    );
   }
 
   componentDidMount() {
@@ -89,20 +86,39 @@ class History extends Component {
       this.setState({ Spinner: true });
       const userProfile = await AsyncStorage.getItem("userData");
       const userData = JSON.parse(userProfile);
-      await this.setState({ userData });
+      this.setState({ userData });
       await this.historyUptake();
 
       this.setState({ Spinner: false });
     } catch (error) {}
   };
 
+  dateToFromNowDaily( myDate ) {
+
+    // get from-now for this date
+    var fromNow = Moment( myDate ).fromNow();
+
+    // ensure the date is displayed with today and yesterday
+    return Moment( myDate ).calendar( null, {
+        // when the date is closer, specify custom values
+        lastWeek: 'YYYY-MM-DD HH:mm:ss',
+        lastDay:  '[Yesterday]',
+        sameDay:  '[Today]',
+        nextDay:  '[Tomorrow]',
+        nextWeek: 'dddd',
+        // when the date is further away, use from-now functionality             
+        sameElse: function () {
+            return "[" + fromNow + "]";
+        }
+    });
+}
+
   async historyUptake() {
     const token = await AsyncStorage.getItem("user_token");
-
     this.setState({ Spinner: true });
     axios({
       method: "GET",
-      url: `${this.state.baseURL}/api/transactions/history/ticket/${this.state.userData.userid}`,
+      url: `${this.state.baseURL}/api/transactions/history/${this.state.userData.userid}`,
       params: {},
       headers: {
         Authorization: `Bearer ${token}`,
@@ -110,16 +126,19 @@ class History extends Component {
     })
       .then(
         function (response) {
+          console.log(response.data)
           this.setState({ Spinner: false });
 
           let history = response.data.data;
 
           this.setState({ history });
+          this.setState({showView: true})
         }.bind(this)
       )
       .catch(
         function (error) {
-          console.log(error.response);
+
+          console.log(error.response.data);
           this.setState({ Spinner: false });
           this.setState({ message: this.state.default_message });
           this.showAlert();
@@ -140,256 +159,288 @@ class History extends Component {
   }
 
   render() {
-    return (
-      <Container style={styles.container}>
-        <Header
-          noShadow
-          style={{ backgroundColor: "#fff", marginTop: 10 }}
-          androidStatusBarColor="#FFFFFF"
-          iosBarStyle="dark-content"
-        >
-          <Left>
-            <AntDesign
-              name={"leftcircleo"}
-              color={"#000"}
-              style={{ fontSize: 20, marginRight: 10 }}
-              onPress={() => this.props.navigation.goBack()}
-            />
-          </Left>
-          <Body></Body>
-        </Header>
-        <Content>
-          <View
-            style={{
-              flexDirection: "row",
-              marginRight: 10,
-              marginLeft: 10,
-              marginTop: 10,
-            }}
+    if(this.state.showView){
+      return (
+        <Container style={styles.container}>
+          <Header
+            noShadow
+            style={{ backgroundColor: "#fff", marginTop: 10 }}
+            androidStatusBarColor="#FFFFFF"
+            iosBarStyle="dark-content"
           >
-            <View style={{ marginLeft: 10, flex: 1, flexDirection: "row" }}>
-              <Text
-                style={{
-                  color: "#273444",
-                  marginLeft: 0,
-                  fontSize: 20,
-                  marginTop: 0,
-                  fontFamily: "ProximaNovaBold",
-                }}
-              >
-                Entry History
-              </Text>
-            </View>
-          </View>
-          {this.state.history.length <= 0 ? (
-            <View>
-              <Image
-                source={require("../../assets/images/alien.png")}
-                style={[styles.imageLogo, { height: 100, width: 100, resizeMode: 'contain'}]}
+            <Left>
+              <AntDesign
+                name={"leftcircleo"}
+                color={"#000"}
+                style={{ fontSize: 20, marginRight: 10 }}
+                onPress={() => this.props.navigation.goBack()}
               />
-              <Text
-                style={[
-                  styles.centerText,
-                  { fontFamily: "ProximaNovaSemiBold",paddingBottom: 15 },
-                ]}
-              >
-                {" "}
-                Nothing to see here
-                {"\n"}
+            </Left>
+            <Body></Body>
+          </Header>
+          <Content>
+            <View
+              style={{
+                flexDirection: "row",
+                marginRight: 10,
+                marginLeft: 10,
+                marginTop: 10,
+              }}
+            >
+              <View style={{ marginLeft: 10, flex: 1, flexDirection: "row" }}>
                 <Text
                   style={{
-                    fontSize: 12,
-                    fontWeight: "normal",
-                    fontFamily: "ProximaNovaReg",
+                    color: "#273444",
+                    marginLeft: 0,
+                    fontSize: 20,
+                    marginTop: 0,
+                    fontFamily: "ProximaNovaBold",
                   }}
                 >
-                  Credit Bag transactions will appear here
+                  Entry History
                 </Text>
-              </Text>
+              </View>
             </View>
-          ) : (
-            <View>
-              <List>
-                {this.state.history.map((item, i) => {
-                  return (
-                    <ListItem key={i} style={styles.selectStyle}>
-                      <Left>
-                        <Text
+            {this.state.history.length <= 0 ? (
+              <View>
+                <Image
+                  source={require("../../assets/images/alien.png")}
+                  style={[styles.imageLogo, { height: 100, width: 100, resizeMode: 'contain'}]}
+                />
+                <Text
+                  style={[
+                    styles.centerText,
+                    { fontFamily: "ProximaNovaSemiBold",paddingBottom: 15 },
+                  ]}
+                >
+                  {" "}
+                  Nothing to see here
+                  {"\n"}
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: "normal",
+                      fontFamily: "ProximaNovaReg",
+                    }}
+                  >
+                    Credit Bag transactions will appear here
+                  </Text>
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <List>
+                  {this.state.history.map((item, i) => {
+                    return (
+                      <ScrollView key={i} style={{flex: 1}}>
+                        <TouchableOpacity
+                        onPress={() => this.props.navigation.push('Invoice', {
+                          ref: item.reference,
+                          page: 'Entry'
+                        })}
                           style={{
-                            color: "black",
-                            fontFamily: "ProximaNovaReg",
-                          }}
-                        >
-                          Ticket No. {item.ticketId} {"\n"}
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flex: 1,
+                            borderBottomColor: '#c4c4c4',
+                            borderBottomWidth: 0.5,
+                            paddingVertical: 20,
+                            paddingHorizontal: 20,
+                          }}>
+                          <View>
+                            <Text
+                              style={{
+                                color: 'black',
+                                fontFamily: 'ProximaNovaSemiBold',
+                                alignItems: 'flex-start',
+                                paddingVertical: 5,
+                              }}>
+                             Ticket No. {item.code}
+                            </Text>
+                            <Text
+                              style={{
+                                // color: 'black',
+                                fontSize: 12,
+                                fontFamily: 'ProximaNovaReg',
+                                paddingVertical: 5,
+                              }}>
+                              Reference {item.reference}
+                            </Text>
+                          </View>
+                          <View>
                           <Text
                             style={{
-                              color: "black",
-                              fontSize: 11,
-                              fontWeight: "normal",
-                              fontFamily: "ProximaNovaReg",
-                              paddingVertical: 5,
-                            }}
-                          >
-                            Reference. {item.reference}
+                              color: 'red',
+                              fontSize: 12,
+                              fontFamily: 'ProximaNovaReg',
+                            }}>
+                            ₦{(item.totalamount)}
                           </Text>
-                        </Text>
-                      </Left>
-                      <Right>
-                        <Text
-                          style={{
-                            color: "red",
-                            fontSize: 11,
-                            fontFamily: "ProximaNovaReg",
-                          }}
-                        >
-                          ₦{item.amount} {"\n"}
                           <Text
                             style={{
-                              color: "black",
-                              fontSize: 11,
-                              fontFamily: "ProximaNovaReg",
-                              paddingVertical: 5,
-                            }}
-                          >
-                            {Moment(item.paymentDate).format("hh:mm:ss a")}
+                              color: '#000',
+                              fontSize: 12,
+                              fontFamily: 'ProximaNovaReg',
+                            }}>
+                            {this.dateToFromNowDaily(item.dateSent)}
                           </Text>
-                        </Text>
-                      </Right>
-                    </ListItem>
-                  );
-                })}
-              </List>
-            </View>
-          )}
-        </Content>
-
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={this.state.showAlert}
-          onRequestClose={() => {}}
-        >
-          <View
-            style={{
-              flex: 1,
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "rgba(0,0,0,0.5)",
-            }}
+                          </View>
+                        </TouchableOpacity>
+                      </ScrollView>
+                    );
+                  })}
+                </List>
+              </View>
+            )}
+          </Content>
+  
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={this.state.showAlert}
+            onRequestClose={() => {}}
           >
             <View
-              style={
-                {
-                  // marginTop: 70,
-                  // marginLeft: 20,
-                  // marginRight: 20,
-                  // borderWidth: 10,
-                  // borderColor: "white",
-                }
-              }
+              style={{
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.5)",
+              }}
             >
               <View
-                style={{
-                  alignSelf: "center",
-                  backgroundColor: "white",
-                  width: 375,
-                  borderRadius: 30,
-                }}
+                style={
+                  {
+                    // marginTop: 70,
+                    // marginLeft: 20,
+                    // marginRight: 20,
+                    // borderWidth: 10,
+                    // borderColor: "white",
+                  }
+                }
               >
-                <Image
-                  source={require("../../assets/images/xbox.png")}
-                  resizeMode="contain"
+                <View
                   style={{
-                    position: "relative",
-                    width: 72,
-                    height: 72,
                     alignSelf: "center",
-                    marginTop: 50,
+                    backgroundColor: "white",
+                    width: 375,
+                    borderRadius: 30,
                   }}
-                ></Image>
-                <View style={{ marginTop: 30, alignSelf: "center" }}>
-                  <Text
+                >
+                  <Image
+                    source={require("../../assets/images/xbox.png")}
+                    resizeMode="contain"
                     style={{
-                      color: "#273444",
-                      textAlign: "center",
-                      textAlignVertical: "center",
-                      fontSize: 20,
-                      fontFamily: "ProximaNovaSemiBold",
+                      position: "relative",
+                      width: 72,
+                      height: 72,
+                      alignSelf: "center",
+                      marginTop: 50,
                     }}
-                  >
-                    Something went wrong 😔
-                  </Text>
-                  <Text
-                    style={{
-                      color: "#273444",
-                      textAlign: "center",
-                      textAlignVertical: "center",
-                      marginTop: 20,
-                      marginLeft: 10,
-                      marginRight: 10,
-                      fontSize: 15,
-                      fontFamily: "ProximaNovaReg",
-                      marginBottom: 10,
-                    }}
-                  >
-                    {/* {this.state.message} */}
-                  </Text>
-                  <View
-                    style={{
-                      justifyContent: "center",
-                      alignItems: "center",
-                      marginBottom: 50,
-                      width: "100%",
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => {
-                        this.hideAlert();
-                      }}
+                  ></Image>
+                  <View style={{ marginTop: 30, alignSelf: "center" }}>
+                    <Text
                       style={{
-                        backgroundColor: "#FF6161",
-                        borderRadius: 30,
-                        paddingVertical: 15,
-                        width: 330,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginTop: 35,
-                        // opacity: 0.4,
+                        color: "#273444",
+                        textAlign: "center",
+                        textAlignVertical: "center",
+                        fontSize: 20,
+                        fontFamily: "ProximaNovaSemiBold",
                       }}
                     >
-                      <Text
+                      Something went wrong 😔
+                    </Text>
+                    <Text
+                      style={{
+                        color: "#273444",
+                        textAlign: "center",
+                        textAlignVertical: "center",
+                        marginTop: 20,
+                        marginLeft: 10,
+                        marginRight: 10,
+                        fontSize: 15,
+                        fontFamily: "ProximaNovaReg",
+                        marginBottom: 10,
+                      }}
+                    >
+                      {/* {this.state.message} */}
+                    </Text>
+                    <View
+                      style={{
+                        justifyContent: "center",
+                        alignItems: "center",
+                        marginBottom: 50,
+                        width: "100%",
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => {
+                          this.hideAlert();
+                        }}
                         style={{
-                          color: "white",
-                          textAlign: "center",
-                          alignSelf: "center",
-                          fontFamily: "ProximaNovaReg",
+                          backgroundColor: "#FF6161",
+                          borderRadius: 30,
+                          paddingVertical: 15,
+                          width: 330,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginTop: 35,
+                          // opacity: 0.4,
                         }}
                       >
-                        Okay, got it!
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          style={{
+                            color: "white",
+                            textAlign: "center",
+                            alignSelf: "center",
+                            fontFamily: "ProximaNovaReg",
+                          }}
+                        >
+                          Okay, got it!
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
             </View>
-          </View>
-        </Modal>
-
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={this.state.Spinner}
-          onRequestClose={() => {}}
-        >
-          <View style={{ marginTop: 300 }}>
-            <View>
-              <Spinner color="red" />
+          </Modal>
+  
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={this.state.Spinner}
+            onRequestClose={() => {}}
+          >
+            <View style={{ marginTop: 300 }}>
+              <View>
+                <Spinner color="red" />
+              </View>
             </View>
-          </View>
-        </Modal>
-      </Container>
-    );
+          </Modal>
+        </Container>
+      );
+    }
+    else {
+      return (
+        <View
+          style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 1,
+            backgroundColor: '#fff',
+          }}>
+          <ActivityIndicator
+            size="large"
+            color={'#FF6161'}
+            // style={{paddingHorizontal: 5, marginTop: -3}}
+          />
+        </View>
+      );
+    }
+
   }
 }
 

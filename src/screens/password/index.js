@@ -12,7 +12,7 @@ import {
   Button,
   Spinner,
 } from 'native-base';
-import {View, Image, Modal, TouchableOpacity, BackHandler} from 'react-native';
+import {View, Image, ActivityIndicator, TouchableOpacity} from 'react-native';
 
 import styles from './style';
 
@@ -42,19 +42,19 @@ class Password extends Component {
       showYes: false,
       showNo: false,
       showBlur: false,
+      errorMessage: null,
+      indicator: false,
+      pwdIndicator: false
     };
   }
 
   componentDidMount() {
-    // BackHandler.addEventListener('hardwareBackPress', () =>
-    //   this.props.navigation.goBack(),
-    // );
     this.getToken();
   }
 
-  getToken() {
+  async getToken() {
     try {
-      const email = this.props.route.params.email;
+      var email =  await AsyncStorage.getItem('@reg_email')
       this.setState({email});
     } catch (error) {
       this.props.navigation.navigate('Login');
@@ -66,7 +66,7 @@ class Password extends Component {
   // }
 
   async loginRequest() {
-    this.setState({Spinner: true});
+    this.setState({indicator: true});
 
     axios({
       method: 'POST',
@@ -93,12 +93,24 @@ class Password extends Component {
                 'user_token',
                 response.data.userSignInResult.token,
               );
-              await AsyncStorage.setItem('@user_token', response.data.userSignInResult.token);
+              await AsyncStorage.setItem(
+                'user_id',
+                response.data.userSignInResult.userid,
+              );
+              await AsyncStorage.setItem(
+                '@user_token',
+                response.data.userSignInResult.token,
+              );
               await AsyncStorage.setItem(
                 'referral_code',
                 response.data.userSignInResult.referralCode,
               );
+              await AsyncStorage.setItem(
+                'user_status',
+                `${response.data.userSignInResult.isEmailVerified}`,
+              );
               this.props.signIn();
+              this.setState({indicator: false});
               // this.props.navigation.navigate('Available');
             } catch (error) {
               this.setState({message: error});
@@ -114,23 +126,15 @@ class Password extends Component {
       )
       .catch(
         function (error) {
-          this.setState({Spinner: false});
-
-          if (error.response.data.status === 'failed') {
-            this.setState({
-              message: `${error.response.data.responseMessage}`,
-            });
-            this.showNo();
-          } else {
-            this.setState({message: `${this.state.default_message}`});
-            this.showNo();
-          }
+          console.log(error.response.data.responseMessage);
+          this.setState({indicator: false});
+          this.setState({errorMessage: error.response.data.responseMessage});
         }.bind(this),
       );
   }
 
   async resetRequest() {
-    this.setState({Spinner: true});
+    this.setState({pwdIndicator: true});
 
     axios({
       method: 'POST',
@@ -141,11 +145,11 @@ class Password extends Component {
     })
       .then(
         function (response) {
-          this.setState({Spinner: false});
+          this.setState({pwdIndicator: false});
 
           if (response.data.status === 'success') {
             try {
-              this.props.navigation.navigate('Reset', {
+              this.props.navigation.push('Reset', {
                 email: this.state.email,
               });
             } catch (error) {
@@ -162,8 +166,7 @@ class Password extends Component {
       )
       .catch(
         function (error) {
-          this.setState({Spinner: false});
-
+          this.setState({pwdIndicator: false});
           if (error.response.data.status === 'fail') {
             this.setState({
               message: `${error.response.data.responseMessage}, Please try again`,
@@ -283,6 +286,19 @@ class Password extends Component {
                   onPress={() => this.toggleView()}
                 />
               </Item>
+              {this.state.errorMessage && (
+                <Text
+                  style={[
+                    styles.textInput2,
+                    {
+                      fontFamily: 'ProximaNova-Regular',
+                      color: 'red',
+                      paddingVertical: 10,
+                    },
+                  ]}>
+                  {this.state.errorMessage}
+                </Text>
+              )}
 
               {this.state.password === '' ? (
                 <View style={{justifyContent: 'center', alignItems: 'center'}}>
@@ -332,22 +348,39 @@ class Password extends Component {
                       }}>
                       Login
                     </Text>
+                    {this.state.indicator && (
+                      <ActivityIndicator
+                        size="small"
+                        color="#ffffff"
+                        style={{paddingHorizontal: 5, marginTop: -3}}
+                      />
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
 
-              <Text
-                style={{
-                  color: 'black',
-                  alignSelf: 'center',
-                  marginTop: 20,
-                  fontFamily: 'ProximaNova-Regular',
-                }}
-                onPress={() => {
-                  this.resetRequest();
-                }}>
-                Forgot password?{' '}
-              </Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center'}}>
+                <Text
+                  style={{
+                    color: 'black',
+                    alignSelf: 'center',
+                    marginTop: 20,
+                    fontFamily: 'ProximaNova-Regular',
+                  }}
+                  onPress={() => {
+                    this.resetRequest();
+                  }}>
+                  Forgot password?{' '}
+                </Text>
+                {this.state.pwdIndicator && (
+                  <ActivityIndicator
+                    size="small"
+                    color="red"
+                    style={{paddingHorizontal: 5}}
+                  />
+                )}
+              </View>
+
               <Text
                 style={{
                   color: 'black',
@@ -362,7 +395,7 @@ class Password extends Component {
                     marginBottom: 10,
                     fontFamily: 'ProximaNova-Regular',
                   }}
-                  onPress={() => this.props.navigation.navigate('Login')}>
+                  onPress={() => this.props.navigation.push('Login')}>
                   {' '}
                   Switch user{' '}
                 </Text>
@@ -370,189 +403,12 @@ class Password extends Component {
             </View>
           </View>
         </Content>
-
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={this.state.showAlert}
-          onRequestClose={() => {}}>
-          <View style={{marginTop: 300, backgroundColor: 'white'}}>
-            <View>
-              <Text
-                style={{
-                  color: 'black',
-                  textAlign: 'center',
-                  textAlignVertical: 'center',
-                }}>
-                {this.state.message}
-              </Text>
-              <Button
-                block
-                rounded
-                style={styles.bottonStyle}
-                onPress={() => {
-                  this.hideAlert();
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                    alignSelf: 'center',
-                  }}>
-                  OK
-                </Text>
-              </Button>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={this.state.Spinner}
-          onRequestClose={() => {}}>
-          <View style={{marginTop: 300}}>
-            <View>
-              <Spinner color="#FF6161" />
-            </View>
-          </View>
-        </Modal>
-
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={this.state.showYes}
-          onRequestClose={() => {}}>
-          <View style={{marginTop: 200, alignSelf: 'center'}}>
-            <Image
-              source={yes}
-              resizeMode="contain"
-              style={{
-                position: 'relative',
-                width: 72,
-                height: 72,
-                alignSelf: 'center',
-              }}></Image>
-            <View style={{marginTop: 30, alignSelf: 'center'}}>
-              <Text
-                style={{
-                  color: 'black',
-                  textAlign: 'center',
-                  textAlignVertical: 'center',
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                }}>
-                Success
-              </Text>
-              <Text
-                style={{
-                  color: 'black',
-                  textAlign: 'center',
-                  textAlignVertical: 'center',
-                  marginTop: 10,
-                }}>
-                You have successfully added a payment card
-              </Text>
-              <Button
-                block
-                rounded
-                style={styles.bottonStyle}
-                onPress={() => {
-                  this.hideYes();
-                  this.props.navigation.navigate('Pay');
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                    alignSelf: 'center',
-                  }}>
-                  OK
-                </Text>
-              </Button>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={this.state.showNo}
-          onRequestClose={() => {}}>
-          <View
-            style={{
-              marginTop: 200,
-              marginLeft: 20,
-              marginRight: 20,
-              borderRadius: 30,
-              borderWidth: 10,
-              borderColor: 'white',
-            }}>
-            <View
-              style={{
-                alignSelf: 'center',
-                backgroundColor: 'white',
-                width: 375,
-              }}>
-              <Image
-                source={no}
-                resizeMode="contain"
-                style={{
-                  position: 'relative',
-                  width: 72,
-                  height: 72,
-                  alignSelf: 'center',
-                  marginTop: 40,
-                }}></Image>
-              <View style={{marginTop: 30, alignSelf: 'center'}}>
-                <Text
-                  style={{
-                    color: '#273444',
-                    textAlign: 'center',
-                    textAlignVertical: 'center',
-                    fontSize: 20,
-                  }}>
-                  Something went wrong 😔
-                </Text>
-                <Text
-                  style={{
-                    color: '#273444',
-                    textAlign: 'center',
-                    textAlignVertical: 'center',
-                    marginTop: 20,
-                    marginLeft: 10,
-                    marginRight: 10,
-                    fontSize: 14,
-                  }}>
-                  {this.state.message} Please check your details again and try
-                  again
-                </Text>
-                <Button
-                  block
-                  rounded
-                  style={styles.bottonStylet}
-                  onPress={() => {
-                    this.hideNo();
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                      alignSelf: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </Button>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </Container>
     );
   }
 }
 
-export default function(props) {
+export default function (props) {
   const {signIn} = React.useContext(AuthContext);
 
   return <Password {...props} signIn={signIn} />;

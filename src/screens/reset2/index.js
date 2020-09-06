@@ -20,7 +20,6 @@ import {
   View,
   Image,
   Modal,
-  AsyncStorage,
   TouchableOpacity,
   TextInput,
   BackHandler
@@ -32,6 +31,7 @@ import axios from "axios";
 
 import { NavigationEvents } from "react-navigation";
 import AntDesign from "react-native-vector-icons/AntDesign";
+import AsyncStorage from '@react-native-community/async-storage';
 
 class Reset2 extends Component {
   constructor(props) {
@@ -39,7 +39,7 @@ class Reset2 extends Component {
     this.state = {
       password2: "",
       password: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -66,12 +66,6 @@ class Reset2 extends Component {
       }
     } catch (error) {}
   };
-
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   async loginRequest() {
     this.setState({ Spinner: true });

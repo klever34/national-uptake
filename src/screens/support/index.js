@@ -75,11 +75,6 @@ class Support extends Component {
   componentDidMount() {
     this.getToken();
   }
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   getToken = async () => {
     try {

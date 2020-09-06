@@ -36,54 +36,56 @@ import History from './src/screens/history/index';
 import Home from './src/screens/home/index';
 import Hoq from './src/screens/hoq/index';
 import Namings from './src/screens/namings/index';
-import Support from "./src/screens/support";
-import Refer from "./src/screens/refer";
-import Refer2 from "./src/screens/refer2";
-import Notify from "./src/screens/notify";
-import Udetails from "./src/screens/udetails";
-import Suc from "./src/screens/success";
-import Udetails2 from "./src/screens/udetails2";
-import Win from "./src/screens/win";
-import Story from "./src/screens/story";
+import Support from './src/screens/support';
+import Refer from './src/screens/refer';
+import Refer2 from './src/screens/refer2';
+import Notify from './src/screens/notify';
+import Udetails from './src/screens/udetails';
+import Suc from './src/screens/success';
+import Udetails2 from './src/screens/udetails2';
+import Win from './src/screens/win';
+import Story from './src/screens/story';
 // // import Camera from "./src/screens/camera";
-import Web from "./src/screens/Web";
-import Faq from "./src/screens/Faq";
-import Invoice from "./src/screens/Invoice";
-import Won from "./src/screens/won";
-import Test from "./src/screens/Test";
-import Newreset from "./src/screens/newreset";
-import Pay from "./src/screens/pay";
-import Payment from "./src/screens/payment";
-import Promo from "./src/screens/promo";
-import Reset2 from "./src/screens/reset2";
-import Reset from "./src/screens/reset";
-
-
+import Web from './src/screens/Web';
+import Faq from './src/screens/Faq';
+import Invoice from './src/screens/Invoice';
+import Won from './src/screens/won';
+import Test from './src/screens/Test';
+import Newreset from './src/screens/newreset';
+import Pay from './src/screens/pay';
+import Payment from './src/screens/payment';
+import Promo from './src/screens/promo';
+import Reset2 from './src/screens/reset2';
+import Reset from './src/screens/reset';
+import GuestUser from './src/screens/guest/GuestUser';
+import Guest from './src/screens/guest/Guest';
+import Token from './src/screens/ereset/token';
 
 const AuthStack = createStackNavigator();
 const AuthStackScreen = () => (
   <AuthStack.Navigator headerMode="none">
     <AuthStack.Screen name="Welcome" component={Welcome} />
+    <AuthStack.Screen name="Guest" component={Guest} />
+    <AuthStack.Screen name="GuestUser" component={GuestUser} />
     <AuthStack.Screen
       name="Login"
       component={Login}
       options={{title: 'Login'}}
     />
-    <AuthStack.Screen name="Register" component={Register} />
     <AuthStack.Screen name="Password" component={Password} />
-    <AuthStack.Screen name="Available" component={Available} />
+    <AuthStack.Screen name="Register" component={Register} />
+    <AuthStack.Screen name="Reset" component={Reset} />
+    <AuthStack.Screen name="Reset2" component={Reset2} />
+    <AuthStack.Screen name="Change" component={Change} />
   </AuthStack.Navigator>
 );
 
-const OtherStack = createStackNavigator()
+const OtherStack = createStackNavigator();
 const OtherStackScreen = () => (
   <OtherStack.Navigator headerMode="none">
     <OtherStack.Screen name="Available" component={Available} />
     <OtherStack.Screen name="Change" component={Change} />
-    <OtherStack.Screen
-      name="Confirm"
-      component={Confirm}
-    />
+    <OtherStack.Screen name="Confirm" component={Confirm} />
     <OtherStack.Screen name="Credit" component={Credit} />
     <OtherStack.Screen name="Details" component={Details} />
     <OtherStack.Screen name="Email" component={Email} />
@@ -111,7 +113,8 @@ const OtherStackScreen = () => (
     <OtherStack.Screen name="Won" component={Won} />
     <OtherStack.Screen name="Test" component={Test} />
     <OtherStack.Screen name="Newreset" component={Newreset} />
-    
+    <OtherStack.Screen name="Token" component={Token} />
+
     <OtherStack.Screen name="Payment" component={Payment} />
     <OtherStack.Screen name="Promo" component={Promo} />
     <OtherStack.Screen name="Reset" component={Reset} />
@@ -149,22 +152,71 @@ const App = () => {
   const [chosenTheme, setChosenTheme] = React.useState(0);
 
   React.useEffect(() => {
+    async function requestCameraPermission() {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+          {
+            title: 'National Uptake',
+            message:
+              'app requires access to users contacts for ease of use for users when they would like to easily share referral codes from within the app. They should be able to click copy or share, when share is clicked, then the users contacts should open up.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          },
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('You can use the camera');
+        } else {
+          console.log('Camera permission denied');
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    // requestCameraPermission();
+  }, []);
+
+  React.useEffect(() => {
+    async function requestLocationPermission() {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          {
+            title: 'National Uptake',
+            message:
+              'app requires access to users location so we are able to protect user accounts from fraudulent activities incase an account is signed in from multiple locations at the same time',
+          },
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          console.log('You can use the location');
+        } else {
+          console.log('location permission denied');
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    requestLocationPermission();
+  }, []);
+
+  React.useEffect(() => {
     async function getToken() {
-      const token = await AsyncStorage.getItem('@firebase_token');
-      console.log(token);
+      const token = await AsyncStorage.getItem('user_token');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const firebase_tok = await AsyncStorage.getItem('@firebase_token');
+      const user_id = await AsyncStorage.getItem('@user_id');
       try {
         const response = await axios.post(
           `${baseUrl}/api/notifications/savetoken`,
           {
-            userId:
-              'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1bmlxdWVfbmFtZSI6ImRlZjRlNGMzLWI0NGUtNDIzZS1hMmJiLTE1MDQ0OTBjMWEwNyIsInJvbGUiOiJDdXN0b21lciIsIm5iZiI6MTU5ODcxMTU3OCwiZXhwIjoxNTk5MzE5OTc4LCJpYXQiOjE1OTg3MTE1Nzh9.3abpOh0qkpsRhRJSOLmN-4hQaQsxdJxeHpiSEVTcnpw',
-            token: token,
+            userId: user_id,
+            token: firebase_tok,
           },
         );
-
         console.log(response.data);
       } catch (error) {
-        console.log(error.response);
+        console.log(error.response.data);
       }
     }
     getToken();
@@ -235,8 +287,12 @@ const App = () => {
         } catch (e) {}
       },
       signOut: async () => {
+        console.log('called me');
         try {
           await AsyncStorage.removeItem('@user_token');
+          await AsyncStorage.removeItem('userData');
+          await AsyncStorage.removeItem('user_token');
+          await AsyncStorage.removeItem('user_id');
           setUserToken(null);
         } catch (e) {}
       },
@@ -287,10 +343,10 @@ const App = () => {
         <AnimatedSplash
           translucent={true}
           isLoaded={splash}
-          logoImage={require('./src/assets/images/merged.png')}
+          logoImage={require('./src/assets/images/merger.png')}
           backgroundColor={'#fff'}
-          logoHeight={300}
-          logoWidht={300}>
+          logoHeight={1000}
+          logoWidht={1000}>
           <>
             <StatusBar barStyle="dark-content" />
 
@@ -308,14 +364,13 @@ const App = () => {
     <AnimatedSplash
       translucent={true}
       isLoaded={splash}
-      logoImage={require('./src/assets/images/merged.png')}
+      logoImage={require('./src/assets/images/merger.png')}
       backgroundColor={'#fff'}
-      logoHeight={300}
-      logoWidht={300}>
+      logoHeight={1000}
+      logoWidht={1000}>
       <AuthContext.Provider value={authContext}>
-      <NavigationContainer>
-
-        <Welcome />
+        <NavigationContainer>
+          <Welcome />
         </NavigationContainer>
       </AuthContext.Provider>
     </AnimatedSplash>

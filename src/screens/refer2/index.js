@@ -26,7 +26,6 @@ import {
   View,
   Image,
   Modal,
-  AsyncStorage,
   StatusBar,
   ScrollView,
   TouchableOpacity,
@@ -36,6 +35,7 @@ import {
 import styles from "./style";
 
 import axios from "axios";
+import AsyncStorage from '@react-native-community/async-storage';
 
 import SmoothPinCodeInput from "react-native-smooth-pincode-input";
 
@@ -58,7 +58,7 @@ class Refer2 extends Component {
     this.state = {
       email: "",
       password: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -76,11 +76,6 @@ class Refer2 extends Component {
     this.getToken();
   }
 
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   getToken = async () => {
     try {

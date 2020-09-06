@@ -5,7 +5,8 @@ const deviceWidth = Dimensions.get("window").width;
 
 export default {
   container: {
-    backgroundColor:"#fff"
+    backgroundColor:"#fff",
+    paddingTop: 30
   },
   imageContainer: {
     backgroundColor: 'white',

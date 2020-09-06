@@ -32,6 +32,7 @@ import {
   Linking,
   BackHandler,
 } from 'react-native';
+import {AuthContext} from '../../../context';
 
 import styles from './style';
 
@@ -57,6 +58,7 @@ var BUTTONS = [
 var DESTRUCTIVE_INDEX = 3;
 var CANCEL_INDEX = 4;
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import {NavigationEvents, withNavigationFocus} from 'react-navigation';
 const options = {
@@ -75,7 +77,7 @@ class Profile extends Component {
       email: '',
       username: '',
       email: '',
-      baseURL: 'http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com',
+      baseURL: 'https://dragonflyapi.nationaluptake.com/',
       message: '',
       default_message: 'Please check your internet connection',
       showAlert: false,
@@ -95,17 +97,15 @@ class Profile extends Component {
       fileData: '',
       fileUri: '',
       imag: {},
+      userStat: null,
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     this.getToken();
-  }
-
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener('hardwareBackPress', () =>
-      this.props.navigation.goBack(),
-    );
+    console.log(this.props);
+    let userVerified = await AsyncStorage.getItem('user_status');
+    this.setState({userStat: userVerified});
   }
 
   getToken = async () => {
@@ -210,6 +210,18 @@ class Profile extends Component {
     this.setState({
       filter: value,
     });
+  }
+
+  async verifyEmail() {
+    const response = await axios.put(
+      `${this.state.baseURL}/api/account/sendtoken/${this.state.userData.userid}`,
+      {
+        email: this.state.userData.email,
+      },
+    );
+    if(response.data.status == 'success'){
+      this.props.navigation.push('Token')
+    }
   }
 
   launchCamera = () => {
@@ -350,7 +362,8 @@ class Profile extends Component {
           </Left>
           <Body></Body>
           <Right>
-            <TouchableOpacity onPress={() => this.props.navigation.push('Notify')}>
+            <TouchableOpacity
+              onPress={() => this.props.navigation.push('Notify')}>
               <View
                 style={{
                   backgroundColor: '#FF6161',
@@ -446,15 +459,19 @@ class Profile extends Component {
               </Left>
               <Right style={{marginRight: 20}}>
                 <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                  <Image
-                    source={require('../../assets/images/verify_email.png')}
-                    style={{
-                      height: 40,
-                      width: 80,
-                      resizeMode: 'contain',
-                      marginHorizontal: 15,
-                    }}
-                  />
+                  {this.state.userStat == 'false' && (
+                    <TouchableOpacity onPress={() => this.verifyEmail()}>
+                      <Image
+                        source={require('../../assets/images/verify_email.png')}
+                        style={{
+                          height: 40,
+                          width: 80,
+                          resizeMode: 'contain',
+                          marginHorizontal: 15,
+                        }}
+                      />
+                    </TouchableOpacity>
+                  )}
                   <AntDesign
                     name={'rightcircleo'}
                     color={'#000'}
@@ -714,7 +731,7 @@ class Profile extends Component {
               marginBottom: 10,
             }}>
             <TouchableOpacity
-              onPress={() => this.props.navigation.navigate('Welcome')}
+              onPress={() => this.props.signOut()}
               style={{
                 borderColor: '#FF6161',
                 borderWidth: 2,
@@ -736,7 +753,10 @@ class Profile extends Component {
                 }}>
                 Logout
               </Text>
-              <Icon name="md-exit" style={{color: '#FF6161', fontSize: 18}} />
+              <Image
+                source={require('../../assets/images/logout.png')}
+                style={{height: 20, width: 20}}
+              />
             </TouchableOpacity>
           </View>
 
@@ -752,7 +772,7 @@ class Profile extends Component {
               onPress={
                 () =>
                   Linking.openURL(
-                    'https://web.facebook.com/National-Uptake-109708640851592/?view_public_for=109708640851592',
+                    'https://wwww.facebook.com/National-Uptake-109708640851592/?view_public_for=109708640851592',
                   )
                 // this.props.navigation.navigate("Web", {
                 //   webUrl:
@@ -782,9 +802,9 @@ class Profile extends Component {
 
             <TouchableOpacity
               onPress={() =>
-                this.props.navigation.navigate('Web', {
-                  webUrl: 'www.instagram.com/nationaluptake',
-                })
+                Linking.openURL(
+                  'https://www.instagram.com/p/CEm0oj7F_2f/?igshid=rflpsnez29zi',
+                )
               }
               style={{
                 borderRadius: 30,
@@ -985,4 +1005,8 @@ class Profile extends Component {
   }
 }
 
-export default Profile;
+export default function (props) {
+  const {signOut} = React.useContext(AuthContext);
+
+  return <Profile {...props} signOut={signOut} />;
+}

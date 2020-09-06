@@ -26,7 +26,6 @@ import {
   View,
   Image,
   Modal,
-  AsyncStorage,
   StatusBar,
   Share,
   TouchableOpacity,
@@ -36,6 +35,7 @@ import {
 import styles from './style';
 
 import axios from 'axios';
+import AsyncStorage from '@react-native-community/async-storage';
 
 import SmoothPinCodeInput from 'react-native-smooth-pincode-input';
 
@@ -59,7 +59,7 @@ class Referral extends Component {
     this.state = {
       email: '',
       password: '',
-      baseURL: 'http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com',
+      baseURL: 'https://dragonflyapi.nationaluptake.com/',
       message: '',
       default_message: 'Please check your internet connection',
       showAlert: false,
@@ -77,12 +77,6 @@ class Referral extends Component {
   async componentDidMount() {
     let code = await AsyncStorage.getItem('referral_code');
     this.setState({myCode: code});
-  }
-
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener('hardwareBackPress', () =>
-      this.props.navigation.goBack(),
-    );
   }
 
   shareFunction = async () => {

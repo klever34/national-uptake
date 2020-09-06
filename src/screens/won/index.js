@@ -60,7 +60,7 @@ class Won extends Component {
     super(props);
     this.state = {
       image: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -108,11 +108,6 @@ class Won extends Component {
     }
   };
 
-  componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
   async Uptake() {
     const token = await AsyncStorage.getItem("user_token");
     this.setState({ Spinner: true });

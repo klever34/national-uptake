@@ -43,7 +43,7 @@ class Promo extends Component {
       promoCode: "",
       lastname: "",
       phonenumber: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -67,11 +67,6 @@ class Promo extends Component {
     } catch (error) {}
   };
 
-  componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   async codeRequest() {
     // this.setState({

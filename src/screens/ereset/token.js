@@ -61,7 +61,7 @@ class Ereset extends Component {
         this.props.navigation.navigate("Login");
       } else {
         const userData = JSON.parse(userProfile);
-        await this.setState({ userData });
+        this.setState({ userData });
         this.emailResetRequest();
       }
     } catch (error) {}
@@ -111,15 +111,17 @@ class Ereset extends Component {
       },
     })
       .then(
-        function (response) {
+        async function (response) {
+            console.log(response);
           this.setState({ Spinner: false });
 
           if (response.data.status === "success") {
             try {
-              this.props.navigation.navigate("Email", {
-                tokenr: this.state.password,
-              });
+                const response = await axios.put(`${this.state.baseURL}/api/account/verify/${this.state.userData.userid}`)
+                await AsyncStorage.setItem('@user_stat', 'true')
+                this.props.navigation.push('Available');
             } catch (error) {
+                console.log(error.response);
               this.setState({ message: error });
               this.showAlert();
             }
@@ -133,6 +135,7 @@ class Ereset extends Component {
       )
       .catch(
         function (error) {
+            console.log(error.response);
           this.setState({ Spinner: false });
           this.setState({ message: this.state.default_message });
           this.showAlert();

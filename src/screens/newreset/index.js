@@ -53,11 +53,6 @@ class Newreset extends Component {
     this.getToken();
   }
 
-  componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   getToken = async () => {
     const email = await this.props.navigation.getParam("email");

@@ -10,10 +10,11 @@ export default {
     height: 447,
   },
   image2: {
-    height: deviceHeight * 0.5,
     bottom: 0,
     position: "absolute",
     width: "100%",
+    borderTopRightRadius: 30,
+    borderTopLeftRadius: 30
   },
   imageLogo: {
     width: 60,
@@ -146,7 +147,7 @@ export default {
     marginBottom: 487 / 2,
     padding: 10,
     paddingHorizontal: 15,
-    height: '20%'
+    height: '20%',
   },
   textInput2x: {
     color: "#121212",

@@ -75,11 +75,6 @@ class Namings extends Component {
     this.getToken();
   }
 
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
 
   getToken = async () => {
     try {
@@ -183,7 +178,7 @@ class Namings extends Component {
             <AntDesign
               name={"leftcircleo"}
               color={"#273444"}
-              style={{ fontSize: 24 }}
+              style={{ fontSize: 24, marginLeft: 5 }}
               onPress={() => this.props.navigation.goBack()}
             />
           </Left>

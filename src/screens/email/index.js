@@ -35,7 +35,7 @@ class Login extends Component {
     this.state = {
       email: "",
       password: "",
-      baseURL: "http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com",
+      baseURL: "https://dragonflyapi.nationaluptake.com/",
       message: "",
       default_message: "Please check your internet connection",
       showAlert: false,
@@ -47,12 +47,6 @@ class Login extends Component {
 
   async componentDidMount() {
     // await AsyncStorage.removeItem("userData");
-  }
-
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
   }
 
   async loginRequest() {
@@ -124,7 +118,7 @@ class Login extends Component {
             <AntDesign
               name={"leftcircleo"}
               color={"#273444"}
-              style={{ fontSize: 24, marginLeft: 10 }}
+              style={{ fontSize: 24, marginLeft: 5 }}
               onPress={() => this.props.navigation.goBack()}
             />
           </Left>
@@ -140,6 +134,7 @@ class Login extends Component {
                   alignItems: "flex-start",
                   fontSize: 20,
                   paddingHorizontal: 20,
+                  marginVertical: 10,
                 },
               ]}
             >

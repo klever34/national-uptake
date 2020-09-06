@@ -11,6 +11,7 @@ import {
   Dimensions,
   ActivityIndicator,
   RefreshControl,
+  PermissionsAndroid
 } from 'react-native';
 
 import {Button, Thumbnail} from 'native-base';
@@ -77,22 +78,19 @@ class Available extends Component {
       timeNow: '',
       netOpacity: 0,
       creditBagAmt: 0,
+      chosenIndex: 0,
+      img: null,
+      drawID: null,
     };
   }
 
   _onRefresh = async () => {
     this.setState({refreshing: true});
-    await this.availableUptake();
-    await this.myUptake();
-    await this.winnerStories();
+    this.fetchApi();
     this.setState({refreshing: false});
   };
 
   getToken = async () => {
-    const now = Moment().format('a');
-    const hr = Moment().format('h');
-    this.setState({now});
-    this.setState({hr});
     try {
       const userProfile = await AsyncStorage.getItem('userData');
       if (userProfile === null) {
@@ -106,8 +104,6 @@ class Available extends Component {
 
         this.setState({userData});
         this.setState({userId: userData.userid});
-        // console.log("userID");
-        // console.log(this.state.userId);
       }
     } catch (error) {}
   };
@@ -116,30 +112,136 @@ class Available extends Component {
 
   backAction = () => {};
 
+  _handleOptionSelectedOne = (item) => {
+    if (item === 'All uptakes') {
+      this.setState({chosenIndex: 0});
+      this._filterUptakes('all');
+    } else if (item === 'Ongoing uptakes') {
+      this.setState({chosenIndex: 1});
+      this._filterUptakes('live');
+    } else if (item === 'Concluded uptakes') {
+      this.setState({chosenIndex: 2});
+      this._filterUptakes('drawn');
+    }
+  };
+
+  _handleOptionSelectedTwo = (item) => {
+    if (item === 'Last month') {
+      this.setState({chosenIndex: 0});
+      this._filterStories('lastmonth');
+    } else if (item === '3 months ago') {
+      this.setState({chosenIndex: 1});
+      this._filterStories('threemonth');
+    } else if (item === 'All time') {
+      this.setState({chosenIndex: 2});
+      this._filterStories('all');
+    }
+  };
+
+  _filterUptakes = async (item) => {
+    const token = await AsyncStorage.getItem('user_token');
+    const result = await axios({
+      method: 'GET',
+      url: `${this.state.baseURL}/api/draws/userdraws/${this.state.userData.userid}?pageNumber=1&pageSize=20`,
+      params: {
+        filterby: item,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    var myUptakes = result.data.data;
+    this.setMyUptakes(myUptakes);
+    this.RBSheet.close();
+  };
+
+  _filterStories = async (item) => {
+    const token = await AsyncStorage.getItem('user_token');
+    const result = await axios({
+      method: 'GET',
+      url: `${this.state.baseURL}/api/winnerstories`,
+      params: {
+        filterby: item,
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    var myUptakes = result.data.data;
+    this.setWinnerStories(myUptakes);
+    this.RBSheet2.close();
+  };
+
   async componentDidMount() {
-    console.log('here');
-    const vm = this;
-    let time = new Date().getHours();
-    this.getToken();
-    this.setState({timeNow: time});
-    NetInfo.addEventListener(async (state) => {
-      vm.setState({networkStatus: state.isConnected});
-      if (vm.state.networkStatus) {
-        vm.setState({netOpacity: 1});
-      }
-      if (vm.state.userData.firstname === 'Guest') {
-        await vm.loadUptakes();
+    this.requestCameraPermission()
+    try {
+      const vm = this;
+      let time = new Date().getHours();
+      this.getToken();
+      this.setState({timeNow: time});
+      NetInfo.addEventListener(async (state) => {
+        vm.setState({networkStatus: state.isConnected});
+        if (vm.state.networkStatus) {
+          vm.setState({netOpacity: 1});
+        }
+        if (vm.state.userData.firstname === 'Guest') {
+          await vm.loadUptakes();
+          return;
+        }
+        vm.fetchApi();
+      });
+
+      if (this.state.userData.firstname === 'Guest') {
+        await this.loadUptakes();
         return;
       }
-      vm.fetchApi();
-    });
-
-    if (this.state.userData.firstname === 'Guest') {
-      await this.loadUptakes();
-      return;
+      this.fetchApi();
+      await this.regToken();
+    } catch (error) {
+      console.log(error);
     }
-    this.fetchApi();
-    // this.setPushNotification();
+  }
+
+  async regToken() {
+    const token = await AsyncStorage.getItem('user_token');
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const firebase_tok = await AsyncStorage.getItem('@firebase_token');
+    const user_id = await AsyncStorage.getItem('@user_id');
+    try {
+      const response = await axios.post(
+        `${baseUrl}/api/notifications/savetoken`,
+        {
+          userId: `${this.state.userData.userid}`,
+          token: firebase_tok,
+        },
+      );
+      console.log(response.data);
+    } catch (error) {
+      console.log(error.response.data);
+    }
+  }
+
+  async requestCameraPermission() {
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.READ_CONTACTS,
+        {
+          title: 'National Uptake',
+          message:
+            'app requires access to users contacts for ease of use for users when they would like to easily share referral codes from within the app. They should be able to click copy or share, when share is clicked, then the users contacts should open up.',
+          buttonNeutral: 'Ask Me Later',
+          buttonNegative: 'Cancel',
+          buttonPositive: 'OK',
+        },
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        console.log('You can use the camera');
+      } else {
+        console.log('Camera permission denied');
+      }
+    } catch (err) {
+      console.warn(err);
+    }
   }
 
   async loadUptakes() {
@@ -209,20 +311,15 @@ class Available extends Component {
     ])
       .then((results) => {
         var avUptakes = results[0].data.data;
-        console.log('avUptakes');
-        console.log(avUptakes);
         vm.setAvailableUptakes(avUptakes);
 
         var myUptakes = results[1].data.data;
-        console.log(myUptakes);
         vm.setMyUptakes(myUptakes);
 
         var winnerStories = results[2].data.data;
-        console.log(winnerStories);
         vm.setWinnerStories(winnerStories);
 
         var credit = results[3].data;
-        console.log(credit.data);
         vm.setState({creditBagAmt: credit.data});
 
         vm.setState({showView: true});
@@ -232,21 +329,9 @@ class Available extends Component {
       });
   }
 
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener('hardwareBackPress', () =>
-      BackHandler.exitApp(),
-    );
-  }
-  componentWillUnmount() {
-    BackHandler.removeEventListener('hardwareBackPress', () =>
-      this.props.navigation.goBack(),
-    );
-  }
-
   _creditBag = async () => {
+    console.log('3');
     const token = await AsyncStorage.getItem('user_token');
-    // this.setState({ Spinner: true });
-
     return axios({
       method: 'GET',
       url: `${this.state.baseURL}/api/account/creditbag/${this.state.userData.userid}`,
@@ -255,14 +340,14 @@ class Available extends Component {
         Authorization: `Bearer ${token}`,
       },
     });
-
-    // this.setState({ Spinner: false });
   };
 
   _availableUptake = async () => {
     this.setState({Spinner: true});
-    const token = await AsyncStorage.getItem('user_token');
+    console.log('4');
 
+    const token = await AsyncStorage.getItem('user_token');
+    console.log('1');
     return axios({
       method: 'GET',
       url: `${this.state.baseURL}/api/draws/livedraws`,
@@ -298,14 +383,12 @@ class Available extends Component {
   };
 
   _myUptake = async () => {
-    // console.log(this.state.userId);
+    console.log('2');
+
     const token = await AsyncStorage.getItem('user_token');
-
-    // this.setState({ Spinner: true });
-
     return axios({
       method: 'GET',
-      url: `${this.state.baseURL}/api/draws/userdraws/${this.state.userData.userid}?pageNumber=1&pageSize=10`,
+      url: `${this.state.baseURL}/api/draws/userdraws/${this.state.userData.userid}?pageNumber=1&pageSize=20`,
       params: {
         filterby: this.state.filter,
       },
@@ -331,6 +414,8 @@ class Available extends Component {
   };
 
   async creditBag() {
+    console.log('4');
+
     try {
       const response = await axios({
         method: 'GET',
@@ -355,6 +440,32 @@ class Available extends Component {
     }
   }
 
+  async setUptakeStat(visit) {
+    let upId = await AsyncStorage.getItem(`uptake-${visit.drawId}`);
+    this.setState({img: visit.imageurl});
+    this.setState({drawID: visit.drawId});
+    if (upId) {
+      this.props.navigation.navigate('Udetails', {
+        image: visit.imageurl,
+        id: visit.drawId,
+      });
+    } else {
+      this.setState({multipleTakes: true});
+    }
+  }
+
+  async goToNext() {
+    await AsyncStorage.setItem(
+      `uptake-${this.state.drawID}`,
+      `${this.state.drawID}`,
+    );
+    this.setState({multipleTakes: false});
+    this.props.navigation.navigate('Udetails', {
+      image: this.state.img,
+      id: this.state.drawID,
+    });
+  }
+
   showAlert() {
     this.setState({
       showAlert: true,
@@ -374,6 +485,10 @@ class Available extends Component {
     this.setState({
       showBlur: !this.state.showBlur,
     });
+  }
+
+  async searchUptakes() {
+    const response = await axios.get(`${baseUrl}`);
   }
 
   hideNo() {
@@ -406,6 +521,16 @@ class Available extends Component {
   }
 
   render() {
+    const openSheetOne = () => {
+      this.RBSheet.open();
+      this.setState({chosenIndex: 0});
+    };
+
+    const openSheetTwo = () => {
+      this.RBSheet2.open();
+      this.setState({chosenIndex: 0});
+    };
+
     if (this.state.networkStatus) {
       if (this.state.showView) {
         if (this.state.userData.firstname === 'Guest') {
@@ -438,8 +563,8 @@ class Available extends Component {
                       flexDirection: 'row',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      paddingHorizontal: 10,
-                      marginTop: 10,
+                      paddingHorizontal: 13,
+                      marginTop: 15,
                     }}>
                     <View>
                       <Text
@@ -556,13 +681,16 @@ class Available extends Component {
                               height: 15,
                               width: 15,
                               position: 'absolute',
-                              top: -1,
-                              right: -3,
+                              top: 3,
+                              right: 3,
                             }}></View>
                         )}
                         {this.state.userData.pictureUrl === null ? (
                           <View>
-                            <Image source={robot} />
+                            <Image
+                              source={robot}
+                              style={{height: 25, width: 25}}
+                            />
                           </View>
                         ) : (
                           <View>
@@ -734,17 +862,13 @@ class Available extends Component {
                                     activeOpacity={0.8}
                                     ref="touchableOpacity"
                                     onPress={() =>
-                                      this.state.userData.firstname === 'Guest'
-                                        ? this.props.navigation.navigate(
-                                            'Welcome',
-                                          )
-                                        : this.props.navigation.navigate(
-                                            'Udetails',
-                                            {
-                                              image: visits.imageurl,
-                                              id: visits.drawId,
-                                            },
-                                          )
+                                      this.props.navigation.navigate(
+                                        'GuestUser',
+                                        {
+                                          image: visits.imageurl,
+                                          id: visits.drawId,
+                                        },
+                                      )
                                     }
                                     // onPress={() =>
                                     //   this.setState({ multipleTakes: true })
@@ -813,19 +937,20 @@ class Available extends Component {
                                       </View>
                                       <TouchableOpacity
                                         activeOpacity={0.9}
-                                        // onPress={() => {
-                                        //   this.state.userData.firstname === "Guest"
-                                        //     ? this.props.navigation.navigate(
-                                        //         "Welcome"
-                                        //       )
-                                        //     : this.props.navigation.navigate(
-                                        //         "Udetails",
-                                        //         {
-                                        //           image: visits.imageurl,
-                                        //           id: visits.drawId,
-                                        //         }
-                                        //       );
-                                        // }}
+                                        onPress={() => {
+                                          this.state.userData.firstname ===
+                                          'Guest'
+                                            ? this.props.navigation.navigate(
+                                                'Welcome',
+                                              )
+                                            : this.props.navigation.navigate(
+                                                'Udetails',
+                                                {
+                                                  image: visits.imageurl,
+                                                  id: visits.drawId,
+                                                },
+                                              );
+                                        }}
                                         style={{
                                           flexDirection: 'row',
                                           alignItems: 'center',
@@ -906,7 +1031,7 @@ class Available extends Component {
                                           rounded
                                           style={{
                                             backgroundColor: 'transparent',
-                                            height: 20,
+                                            height: 30,
                                           }}>
                                           <CountDown
                                             until={Moment(
@@ -1331,7 +1456,7 @@ class Available extends Component {
                                   <TouchableOpacity
                                     onPress={() =>
                                       this.props.navigation.navigate(
-                                        'Udetails',
+                                        'Udetails2',
                                         {
                                           image: visits.imageurl,
                                           id: visits.drawId,
@@ -1361,13 +1486,14 @@ class Available extends Component {
                                 visits.claimStatus === 'Claimed' && (
                                   <TouchableOpacity
                                     onPress={() =>
-                                      this.props.navigation.navigate(
-                                        'Udetails',
-                                        {
-                                          image: visits.imageurl,
-                                          id: visits.drawId,
-                                        },
-                                      )
+                                      // this.props.navigation.navigate(
+                                      //   'Udetails2',
+                                      //   {
+                                      //     image: visits.imageurl,
+                                      //     id: visits.drawId,
+                                      //   },
+                                      // )
+                                      null
                                     }
                                     style={{
                                       borderColor: '#FF6161',
@@ -1834,7 +1960,7 @@ class Available extends Component {
                           }}>
                           <TouchableOpacity
                             onPress={() => {
-                              this.setState({multipleTakes: false});
+                              this.goToNext();
                             }}
                             style={{
                               backgroundColor: '#FF6161',
@@ -1975,14 +2101,17 @@ class Available extends Component {
                       />
                       <Text
                         style={{
-                          fontSize: 16,
+                          fontSize: 14,
                           fontFamily: 'ProximaNovaAltBold',
                           color: '#000',
                         }}>
                         ₦
-                        {this.state.creditBagAmt
-                          .toFixed(2)
-                          .replace(/\d(?=(\d{3})+\.)/g, '$&,')}
+                        {
+                          this.state.creditBagAmt
+                            .toFixed(2)
+                            .replace(/\d(?=(\d{3})+\.)/g, '$&,')
+                            .split('.')[0]
+                        }
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -2189,10 +2318,8 @@ class Available extends Component {
                                   activeOpacity={0.8}
                                   ref="touchableOpacity"
                                   onPress={() =>
-                                    this.state.userData.firstname === 'Guest'
-                                      ? this.props.navigation.navigate(
-                                          'Welcome',
-                                        )
+                                    visits.drawMode === 'Multipe'
+                                      ? this.setUptakeStat(visits)
                                       : this.props.navigation.navigate(
                                           'Udetails',
                                           {
@@ -2254,6 +2381,10 @@ class Available extends Component {
                                           style={{
                                             fontFamily: 'ProximaNovaBold',
                                             color: '#000',
+                                            textDecorationLine:
+                                              visits.drawType === 'Promotional'
+                                                ? 'line-through'
+                                                : 'none',
                                           }}>
                                           ₦{visits.tamount}
                                         </Text>
@@ -2268,19 +2399,17 @@ class Available extends Component {
                                     </View>
                                     <TouchableOpacity
                                       activeOpacity={0.9}
-                                      // onPress={() => {
-                                      //   this.state.userData.firstname === "Guest"
-                                      //     ? this.props.navigation.navigate(
-                                      //         "Welcome"
-                                      //       )
-                                      //     : this.props.navigation.navigate(
-                                      //         "Udetails",
-                                      //         {
-                                      //           image: visits.imageurl,
-                                      //           id: visits.drawId,
-                                      //         }
-                                      //       );
-                                      // }}
+                                      onPress={() => {
+                                        visits.drawMode === 'Multipe'
+                                          ? this.setUptakeStat(visits)
+                                          : this.props.navigation.navigate(
+                                              'Udetails',
+                                              {
+                                                image: visits.imageurl,
+                                                id: visits.drawId,
+                                              },
+                                            );
+                                      }}
                                       style={{
                                         flexDirection: 'row',
                                         alignItems: 'center',
@@ -2370,6 +2499,7 @@ class Available extends Component {
                                             fontFamily: 'ProximaNovaBold',
                                             // marginLeft:
                                             paddingHorizontal: 12,
+                                            marginTop: -7,
                                           }}>
                                           <CountDown
                                             until={Moment(
@@ -2431,7 +2561,15 @@ class Available extends Component {
                                           zIndex: 1,
                                         }}
                                         onPress={() =>
-                                          this.setState({multipleTakes: true})
+                                          visits.drawMode === 'Multipe'
+                                            ? this.setUptakeStat(visits)
+                                            : this.props.navigation.navigate(
+                                                'Udetails',
+                                                {
+                                                  image: visit.imageurl,
+                                                  id: visit.drawId,
+                                                },
+                                              )
                                         }>
                                         <TouchableOpacity
                                           style={{zIndex: 1}}
@@ -2463,7 +2601,7 @@ class Available extends Component {
                   })}
                 {this.state.tabIndex === 1 && (
                   <TouchableOpacity
-                    onPress={() => this.RBSheet.open()}
+                    onPress={() => openSheetOne()}
                     style={{
                       padding: 5,
                       backgroundColor: '#5B9DEE10',
@@ -2500,7 +2638,13 @@ class Available extends Component {
                 {this.state.tabIndex === 1 &&
                   this.state.myTakes.map((visits, i) => {
                     return (
-                      <View
+                      <TouchableOpacity
+                        onPress={() =>
+                          this.props.navigation.navigate('Udetails2', {
+                            image: visits.imageurl,
+                            id: visits.drawId,
+                          })
+                        }
                         key={i}
                         style={[
                           styles.card,
@@ -2518,9 +2662,14 @@ class Available extends Component {
                           style={{
                             height: '70%',
                             width: '100%',
-                            // resizeMode: "contain",
                           }}
                           blurRadius={visits.drawStatus === 'Drawn' ? 2 : 0}
+                          onPress={() =>
+                            this.props.navigation.navigate('Udetails2', {
+                              image: visits.imageurl,
+                              id: visits.drawId,
+                            })
+                          }
                         />
                         <View
                           style={{
@@ -2603,7 +2752,7 @@ class Available extends Component {
                                       <TouchableOpacity
                                         onPress={() =>
                                           this.props.navigation.navigate(
-                                            'Udetails',
+                                            'Udetails2',
                                             {
                                               image: visits.imageurl,
                                               id: visits.drawId,
@@ -2657,13 +2806,13 @@ class Available extends Component {
                                       style={{
                                         backgroundColor: 'rgba(0,0,0,0.3)',
                                         borderRadius: 20,
-                                        borderRadius: 60,
+                                        // borderRadius: 30,
                                         flex: 1,
                                         alignItems: 'center',
                                         padding: 10,
-                                        paddingRight: 40,
-                                        paddingLeft: 40,
-                                        // paddingTop: 7,
+                                        paddingRight: 20,
+                                        paddingLeft: 20,
+                                        paddingTop: -10,
                                         justifyContent: 'center',
                                       }}>
                                       <CountDown
@@ -2827,7 +2976,7 @@ class Available extends Component {
                                     fontFamily: 'ProximaNovaBold',
                                     color: '#000',
                                   }}>
-                                  ₦{visits.tamount}
+                                  ₦{visits.tamount.split('.')[0]}
                                 </Text>
                                 <Text
                                   style={{
@@ -2842,10 +2991,13 @@ class Available extends Component {
                               visits.claimStatus === 'Unclaimed' && (
                                 <TouchableOpacity
                                   onPress={() =>
-                                    this.props.navigation.navigate('Udetails', {
-                                      image: visits.imageurl,
-                                      id: visits.drawId,
-                                    })
+                                    this.props.navigation.navigate(
+                                      'Udetails2',
+                                      {
+                                        image: visits.imageurl,
+                                        id: visits.drawId,
+                                      },
+                                    )
                                   }
                                   style={{
                                     backgroundColor: '#FF6161',
@@ -2870,10 +3022,11 @@ class Available extends Component {
                               visits.claimStatus === 'Claimed' && (
                                 <TouchableOpacity
                                   onPress={() =>
-                                    this.props.navigation.navigate('Udetails', {
-                                      image: visits.imageurl,
-                                      id: visits.drawId,
-                                    })
+                                    // this.props.navigation.navigate('Udetails2', {
+                                    //   image: visits.imageurl,
+                                    //   id: visits.drawId,
+                                    // })
+                                    null
                                   }
                                   style={{
                                     borderColor: '#FF6161',
@@ -2952,7 +3105,7 @@ class Available extends Component {
                             )}
                           </View>
                         </View>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })}
 
@@ -2992,7 +3145,7 @@ class Available extends Component {
 
                 {this.state.tabIndex === 2 && (
                   <TouchableOpacity
-                    onPress={() => this.RBSheet2.open()}
+                    onPress={() => openSheetTwo()}
                     style={{
                       padding: 5,
                       backgroundColor: '#5B9DEE10',
@@ -3122,6 +3275,8 @@ class Available extends Component {
               openDuration={250}
               customStyles={{
                 container: {
+                  borderTopRightRadius: 30,
+                  borderTopLeftRadius: 30,
                   // justifyContent: "center",
                   // alignItems: "center",
                 },
@@ -3142,9 +3297,7 @@ class Available extends Component {
                     return (
                       <TouchableOpacity
                         key={i}
-                        onPress={() =>
-                          this._handleOptionSelected(item, questionItem)
-                        }
+                        onPress={() => this._handleOptionSelectedOne(item)}
                         activeOpacity={0.8}
                         style={[
                           styles.radioButton,
@@ -3178,7 +3331,10 @@ class Available extends Component {
                                 {
                                   height: 10,
                                   width: 10,
-                                  backgroundColor: '#2ba2d3',
+                                  backgroundColor:
+                                    this.state.chosenIndex === i
+                                      ? '#2ba2d3'
+                                      : '#fff',
                                 },
                               ]}
                             />
@@ -3199,8 +3355,8 @@ class Available extends Component {
               openDuration={250}
               customStyles={{
                 container: {
-                  // justifyContent: "center",
-                  // alignItems: "center",
+                  borderTopRightRadius: 30,
+                  borderTopLeftRadius: 30,
                 },
               }}>
               <Text
@@ -3219,9 +3375,7 @@ class Available extends Component {
                     return (
                       <TouchableOpacity
                         key={i}
-                        onPress={() =>
-                          this._handleOptionSelected(item, questionItem)
-                        }
+                        onPress={() => this._handleOptionSelectedTwo(item)}
                         activeOpacity={0.8}
                         style={[
                           styles.radioButton,
@@ -3255,7 +3409,10 @@ class Available extends Component {
                                 {
                                   height: 10,
                                   width: 10,
-                                  backgroundColor: '#2ba2d3',
+                                  backgroundColor:
+                                    this.state.chosenIndex === i
+                                      ? '#2ba2d3'
+                                      : '#fff',
                                 },
                               ]}
                             />
@@ -3339,7 +3496,7 @@ class Available extends Component {
                         }}>
                         <TouchableOpacity
                           onPress={() => {
-                            this.setState({multipleTakes: false});
+                            this.goToNext();
                           }}
                           style={{
                             backgroundColor: '#FF6161',

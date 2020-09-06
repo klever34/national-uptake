@@ -1,45 +1,20 @@
 import React, {Component} from 'react';
 import {
-  Container,
-  Header,
-  Content,
-  Icon,
-  Text,
-  Card,
-  Body,
-  CardItem,
-  Thumbnail,
-  H1,
-  Input,
-  Button,
-  Left,
-  Title,
-  Right,
-  Footer,
-  FooterTab,
-  Badge,
-  Fab,
-  IconNB,
-  Spinner,
-  ListItem,
-  List,
-} from 'native-base';
-import {
-  ImageBackground,
   View,
-  Image,
-  Modal,
   TouchableOpacity,
   Linking,
-  ScrollView,
   ActivityIndicator,
   BackHandler,
+  ImageBackground,
+  Text,
+  Image,
+  Dimensions,
 } from 'react-native';
 
+import {Button} from 'native-base';
+
 import styles from './style';
-
 import axios from 'axios';
-
 import Moment from 'moment';
 import AsyncStorage from '@react-native-community/async-storage';
 
@@ -54,13 +29,16 @@ const tick = require('../../assets/images/Ticket.png');
 import {NavigationEvents} from 'react-navigation';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import NetInfo from '@react-native-community/netinfo';
+import {ScrollView} from 'react-native-gesture-handler';
+const deviceWidth = Dimensions.get('window').width;
+import CountDown from 'react-native-countdown-component';
 
 class Story extends Component {
   constructor(props) {
     super(props);
     this.state = {
       dimage: '',
-      baseURL: 'http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com',
+      baseURL: 'https://dragonflyapi.nationaluptake.com/',
       message: '',
       default_message: 'Please check your internet connection',
       showAlert: false,
@@ -155,12 +133,6 @@ class Story extends Component {
       // this.setState({ message: error.response.data.message });
       // this.showAlert();
     }
-  }
-
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener('hardwareBackPress', () =>
-      this.props.navigation.goBack(),
-    );
   }
 
   async availableUptake() {
@@ -289,145 +261,125 @@ class Story extends Component {
     if (this.state.networkStatus) {
       if (this.state.showView) {
         return (
-          <Container>
-            {/* <NavigationEvents onDidFocus={() => this.getToken()} /> */}
-
-            <ImageBackground
-              source={{
-                uri: this.state.uptakes.imageUrl
-                  ? this.state.uptakes.imageUrl
-                  : this.state.Timage,
-              }}
-              style={styles.imageContainer}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  marginTop: 40,
-                  marginLeft: 20,
-                  position: 'absolute',
-                  marginRight: 20,
-                }}>
-                <TouchableOpacity
-                  onPress={() => this.props.navigation.goBack()}
-                  style={{
-                    height: 40,
-                    width: 40,
-                    borderRadius: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#555558',
-                  }}>
-                  <AntDesign
-                    name={'closecircleo'}
-                    color={'#fff'}
-                    style={{fontSize: 23}}
-                  />
-                </TouchableOpacity>
-
-                <Right>
-                  {/* <TouchableOpacity
-                  onPress={() => this.props.navigation.goBack()}
-                  style={{
-                    height: 40,
-                    width: 40,
-                    borderRadius: 40,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "#555558",
-                  }}
-                >
-                  <Image
-                    source={require("../../../assets/chatt.png")}
-                    style={{ height: 23, width: 23 }}
-                  />
-                </TouchableOpacity> */}
-                </Right>
-              </View>
-
-              <View
-                // source={inputImage}
-                // resizeMode="stretch"
-                style={[
-                  styles.image2,
-                  {
-                    borderTopRightRadius: 30,
-                    borderTopLeftRadius: 30,
-                    backgroundColor: '#fff',
-                  },
-                ]}>
+          <ScrollView style={{flex: 1}}>
+            <View style={{flex: 1}}>
+              <ImageBackground
+                source={{
+                  uri: this.state.uptakes.imageUrl
+                    ? this.state.uptakes.imageUrl
+                    : this.state.Timage,
+                }}
+                style={styles.imageContainer}>
                 <View
                   style={{
-                    marginLeft: 10,
-                    marginTop: 10,
                     flexDirection: 'row',
+                    marginTop: 40,
+                    marginLeft: 20,
+                    position: 'absolute',
+                    marginRight: 20,
                   }}>
-                  <H1
-                    style={[styles.textInput, {fontFamily: 'ProximaNovaReg'}]}>
+                  <TouchableOpacity
+                    onPress={() => this.props.navigation.goBack()}
+                    style={{
+                      height: 40,
+                      width: 40,
+                      borderRadius: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#555558',
+                    }}>
+                    <AntDesign
+                      name={'closecircleo'}
+                      color={'#fff'}
+                      style={{fontSize: 23}}
+                    />
+                  </TouchableOpacity>
+                </View>
+              </ImageBackground>
+              <View
+                style={{
+                  backgroundColor: 'white',
+                  borderTopRightRadius: 30,
+                  borderTopLeftRadius: 30,
+                  marginTop: -50,
+                  flex: 1,
+                }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: 10,
+                    marginHorizontal: 5,
+                  }}>
+                  <Text
+                    style={{fontFamily: 'ProximaNovaSemiBold', fontSize: 18}}>
                     {this.state.uptakes.title}
-                  </H1>
-                  <Right>
-                    <Text
-                      style={{
-                        color: '#273444',
-                        fontSize: 10,
-                        fontWeight: '100',
-                        marginRight: 10,
-                        fontFamily: 'ProximaNovaReg',
-                      }}>
-                      Draw date {'\n'}
-                      <Text
-                        style={{
-                          color: '#273444',
-                          fontSize: 12,
-                          fontWeight: '100',
-                          fontFamily: 'ProximaNovaReg',
-                        }}>
-                        July 20, 2020
-                      </Text>
+                  </Text>
+                  <View>
+                    <Text style={{fontFamily: 'ProximaNovaReg', fontSize: 10}}>
+                      Draw date
                     </Text>
-                  </Right>
+                    <Text style={{fontFamily: 'ProximaNovaReg', fontSize: 12}}>
+                      July 20, 2020
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    padding: 10,
+                    borderRadius: 20,
+                    alignItems: 'center',
+                    backgroundColor: '#5B9DEE10',
+                    margin: 20,
+                  }}>
+                  <Image
+                    source={{uri: `${this.state.uptakes.wonItemImageUrl}`}}
+                    style={{height: 80, width: 80, borderRadius: 80}}
+                  />
+                  <Text
+                    style={{
+                      fontFamily: 'ProximaNovaSemiBold',
+                      fontSize: 18,
+                      marginLeft: 15,
+                    }}>
+                    {this.state.uptakes.wonItem}
+                  </Text>
+                </View>
+                <Text
+                  style={{
+                    fontFamily: 'ProximaNovaReg',
+                    fontSize: 14,
+                    marginHorizontal: 15,
+                  }}>
+                  {this.state.uptakes.story}
+                </Text>
+                <View style={{alignItems: 'center'}}>
+                  <Image
+                    source={require('../../assets/images/vid2.png')}
+                    style={{height: 300, width: '100%', resizeMode: 'contain'}}
+                  />
                 </View>
 
-                <Content
-                  padder
+                <View
                   style={{
-                    borderRadius: 10,
-                    borderColor: 'white',
-                    borderWidth: 5,
-                    shadowColor: 'white',
+                    marginTop: 10,
+                    alignSelf: 'center',
+                    marginBottom: 10,
                   }}>
-                  <List>
-                    <ListItem style={styles.selectStyle2}>
-                      <Left>
-                        <View style={{flex: 1, flexDirection: 'row'}}>
-                          <Thumbnail
-                            large
-                            source={{
-                              uri: `${this.state.uptakes.wonItemImageUrl}`,
-                            }}
-                            style={styles.imageLogo}
-                          />
-
-                          <View
-                            style={{
-                              marginLeft: 20,
-                              flex: 1,
-                              flexDirection: 'row',
-                            }}>
-                            <Text
-                              style={{
-                                color: 'black',
-                                fontSize: 12,
-                                fontFamily: 'ProximaNovaAltBold',
-                              }}>
-                              {this.state.uptakes.wonItem}
-                            </Text>
-                          </View>
-                        </View>
-                      </Left>
-                    </ListItem>
-                  </List>
-
+                  <TouchableOpacity
+                    onPress={() => this.handleClick()
+                    }>
+                    <Image source={cong} style={{height: 100, width: 100}} />
+                  </TouchableOpacity>
+                </View>
+                <View
+                  style={{
+                    marginTop: 5,
+                    alignSelf: 'center',
+                    marginBottom: 10,
+                  }}>
                   <Text
                     style={{
                       color: '#273444',
@@ -435,542 +387,309 @@ class Story extends Component {
                       marginLeft: 10,
                       marginRight: 0,
                       marginTop: 20,
+                      fontFamily: 'ProximaNovaAltBold',
+                      textAlign: 'center',
+                    }}>
+                    Congrats {this.state.uptakes.title}!
+                  </Text>
+                  <Text
+                    style={{
+                      color: '#273444',
+                      fontSize: 14,
+                      marginLeft: 10,
+                      marginRight: 0,
+                      marginTop: 20,
+                      textAlign: 'center',
                       fontFamily: 'ProximaNovaReg',
                     }}>
-                    {this.state.uptakes.story}
+                    Feeling good? Chooses below to enter a giveaway of your
+                    choice.
                   </Text>
 
-                  <View
+                  <Text
                     style={{
-                      marginTop: 15,
-                      alignSelf: 'center',
-                      marginBottom: 10,
+                      color: '#273444',
+                      fontSize: 14,
+                      marginLeft: 10,
+                      marginRight: 0,
+                      marginTop: 20,
+                      textAlign: 'center',
+                      fontFamily: 'ProximaNovaReg',
                     }}>
-                    <TouchableOpacity onPress={() => this.handleClick()}>
-                      <View
-                        style={{
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
+                    Be like {this.state.uptakes.title}, take a chance!
+                  </Text>
+                </View>
+                <View></View>
+
+                <Text
+                  style={[
+                    styles.textInput,
+                    {fontFamily: 'ProximaNovaAltBold'},
+                  ]}>
+                  Popular uptakes 🔥
+                </Text>
+                <ScrollView
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                  style={{flex: 1, marginLeft: 15}}>
+                  {this.state.available.map((visits, i) => {
+                    return (
+                      <TouchableOpacity
+                        // delayPressIn={this.state.scrollBegin ? 150: 0}
+                        activeOpacity={0.8}
+                        ref="touchableOpacity"
+                        onPress={() =>
+                          this.state.userData.firstname === 'Guest'
+                            ? this.props.navigation.navigate('Welcome')
+                            : this.props.navigation.navigate('Udetails', {
+                                image: visits.imageurl,
+                                id: visits.drawId,
+                              })
+                        }
+                        // onPress={() =>
+                        //   this.setState({ multipleTakes: true })
+                        // }
+                        key={visits.drawId}
+                        style={[
+                          styles.card,
+                          {
+                            elevation: 3,
+                            marginVertical: 20,
+                            width: deviceWidth * 0.8,
+                            padding: 0,
+                            height: 300,
+                            marginRight: 20,
+                            flex: 1,
+                          },
+                        ]}>
                         <Image
-                          source={vid}
+                          source={{uri: visits.imageurl}}
                           style={{
-                            resizeMode: 'contain',
-                            height: '40%',
-                            width: '90%',
+                            height: '70%',
+                            width: '100%',
                           }}
                         />
-                      </View>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View
-                    style={{
-                      marginTop: 15,
-                      alignSelf: 'center',
-                      marginBottom: 10,
-                    }}>
-                    <View>
-                      <Image source={cong} style={{height: 100, width: 100}} />
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      marginTop: 5,
-                      alignSelf: 'center',
-                      marginBottom: 10,
-                    }}>
-                    <Text
-                      style={{
-                        color: '#273444',
-                        fontSize: 16,
-                        marginLeft: 10,
-                        marginRight: 0,
-                        marginTop: 20,
-                        fontFamily: 'ProximaNovaAltBold',
-                        textAlign: 'center',
-                      }}>
-                      Congrats {this.state.uptakes.title}!
-                    </Text>
-                    <Text
-                      style={{
-                        color: '#273444',
-                        fontSize: 16,
-                        marginLeft: 10,
-                        marginRight: 0,
-                        marginTop: 20,
-                        textAlign: 'center',
-                        fontFamily: 'ProximaNovaReg',
-                      }}>
-                      Feeling good? Chooses below to enter a giveaway of your
-                      choice.
-                    </Text>
-
-                    <Text
-                      style={{
-                        color: '#273444',
-                        fontSize: 16,
-                        marginLeft: 10,
-                        marginRight: 0,
-                        marginTop: 20,
-                        textAlign: 'center',
-                        fontFamily: 'ProximaNovaReg',
-                      }}>
-                      Be like {this.state.uptakes.title}, take a chance!
-                    </Text>
-                  </View>
-                  <View></View>
-
-                  <H1
-                    style={[
-                      styles.textInput,
-                      {fontFamily: 'ProximaNovaAltBold'},
-                    ]}>
-                    Popular uptakes 🔥
-                  </H1>
-
-                  <ScrollView
-                    horizontal={true}
-                    showsHorizontalScrollIndicator={false}>
-                    {this.state.available.map((visits, i) => {
-                      return (
                         <View
-                          key={visits.drawId}
                           style={{
-                            marginLeft: 0,
-                            backgroundColor: 'white',
-                            borderRadius: 10,
-                            borderWidth: 10,
-                            borderColor: 'white',
-                            marginRight: 10,
+                            paddingHorizontal: 10,
+                            paddingVertical: 10,
                           }}>
-                          <TouchableOpacity
-                            onPress={() => {
-                              this.state.userData.firstname === 'Guest'
-                                ? this.props.navigation.navigate('Welcome')
-                                : this.props.navigation.navigate('Udetails', {
-                                    image: visits.imageurl,
-                                    id: visits.drawId,
-                                  });
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
                             }}>
-                            <ImageBackground
-                              source={{uri: visits.imageurl}}
-                              style={styles.imageMain}>
-                              <View
-                                style={{
-                                  flexDirection: 'row',
-                                  alignSelf: 'flex-end',
-                                  marginTop: 20,
-                                  marginLeft: 20,
-                                }}>
-                                <Button small rounded style={styles.buttonimg2}>
-                                  <Text style={styles.textMain3}>
-                                    {Moment(visits.drawDate).format('hh:mm:ss')}
-                                  </Text>
-                                </Button>
-
-                                <Right>
-                                  {/* {visits.drawMode === 'Multiple' ?
-                                                        <Button small rounded style={styles.buttonimg2} onPress={() => {this.showNo();}}>
-                                                        <Icon type="MaterialIcons" name='layers' style={{color: 'white', fontSize: 14, }}></Icon>
-                                                            </Button>
-                                                            :
-                                                            <View></View>
-                                                            } */}
-                                </Right>
-                              </View>
-                            </ImageBackground>
+                            <Text
+                              style={{
+                                fontFamily: 'ProximaNovaAltBold',
+                                color: '#000',
+                              }}>
+                              {visits.name}
+                            </Text>
                             <View
                               style={{
-                                flex: 1,
                                 flexDirection: 'row',
-                                justifyContent: 'flex-start',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                               }}>
                               <Text
-                                style={[
-                                  styles.textMain,
-                                  {fontFamily: 'ProximaNovaAltBold'},
-                                ]}>
-                                {visits.name}
+                                style={{
+                                  fontFamily: 'ProximaNovaBold',
+                                  color: '#000',
+                                }}>
+                                ₦{visits.tamount}
                               </Text>
-
-                              <Right>
-                                <Text
-                                  style={[
-                                    styles.textMain2,
-                                    {fontFamily: 'ProximaNovaReg'},
-                                  ]}>
-                                  {'\u20A6'}
-                                  {visits.tamount}/entry
-                                </Text>
-                              </Right>
+                              <Text
+                                style={{
+                                  fontFamily: 'ProximaNovaReg',
+                                  color: '#000',
+                                }}>
+                                /entry
+                              </Text>
                             </View>
-                            <View
-                              style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-start',
-                              }}>
-                              <Image source={pep} />
-
-                              <Right>
-                                <View
-                                  style={{
-                                    alignSelf: 'flex-end',
-                                    flexDirection: 'row',
-                                    marginBottom: 10,
-                                    marginRight: 10,
-                                    marginTop: 10,
-                                  }}>
-                                  <Button
-                                    small
-                                    block
-                                    rounded
-                                    style={styles.bottonEnter}
-                                    onPress={() => {
-                                      this.state.userData.firstname === 'Guest'
-                                        ? this.props.navigation.navigate(
-                                            'Welcome',
-                                          )
-                                        : this.props.navigation.navigate(
-                                            'Udetails',
-                                            {
-                                              image: visits.imageurl,
-                                              id: visits.drawId,
-                                            },
-                                          );
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.9}
+                            // onPress={() => {
+                            //   this.state.userData.firstname === "Guest"
+                            //     ? this.props.navigation.navigate(
+                            //         "Welcome"
+                            //       )
+                            //     : this.props.navigation.navigate(
+                            //         "Udetails",
+                            //         {
+                            //           image: visits.imageurl,
+                            //           id: visits.drawId,
+                            //         }
+                            //       );
+                            // }}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              marginTop: 15,
+                            }}>
+                            {visits.randomUserImgs !== null && (
+                              <View style={{flexDirection: 'row'}}>
+                                {visits.randomUserImgs.map((item, i) => (
+                                  <View
+                                    key={i}
+                                    style={{
+                                      marginLeft: i > 0 ? -7 * i : 0,
                                     }}>
                                     <Image
-                                      source={tick}
-                                      resizeMode="contain"
+                                      source={{
+                                        uri: item.profileImgUrl,
+                                      }}
                                       style={{
-                                        width: 12,
-                                        marginRight: -10,
-                                        marginLeft: 20,
-                                      }}></Image>
-                                    <Text
-                                      style={[
-                                        styles.textMain3,
-                                        {fontFamily: 'ProximaNovaSemiBold'},
-                                      ]}>
-                                      Enter
-                                    </Text>
-                                  </Button>
-                                </View>
-                              </Right>
+                                        height: 20,
+                                        width: 20,
+                                        borderRadius: 20,
+                                      }}
+                                    />
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                            <View
+                              style={{
+                                backgroundColor: '#FF6161',
+                                borderRadius: 30,
+                                width: '30%',
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                flexDirection: 'row',
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                justifyContent: 'space-evenly',
+                              }}>
+                              <Image source={tick} />
+                              <Text
+                                style={{
+                                  color: '#fff',
+                                  fontFamily: 'ProximaNovaReg',
+                                }}>
+                                Enter
+                              </Text>
                             </View>
                           </TouchableOpacity>
                         </View>
-                      );
-                    })}
-                  </ScrollView>
-                </Content>
-              </View>
-            </ImageBackground>
-
-            {/* <Modal
-              animationType="slide"
-              transparent={false}
-              visible={this.state.showAlert}
-              onRequestClose={() => {}}
-            >
-              <View style={{ marginTop: 300, backgroundColor: "white" }}>
-                <View>
-                  <Text
-                    style={{
-                      color: "black",
-                      textAlign: "center",
-                      textAlignVertical: "center",
-                    }}
-                  >
-                    {this.state.message}
-                  </Text>
-                  <Button
-                    block
-                    rounded
-                    style={styles.bottonStyle}
-                    onPress={() => {
-                      this.hideAlert();
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: "white",
-                        textAlign: "center",
-                        alignSelf: "center",
-                      }}
-                    >
-                      OK
-                    </Text>
-                  </Button>
-                </View>
-              </View>
-            </Modal> */}
-
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={this.state.showAlert}
-              onRequestClose={() => {}}>
-              <View
-                style={{
-                  flex: 1,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: 'rgba(0,0,0,0.5)',
-                }}>
-                <View
-                  style={
-                    {
-                      // marginTop: 70,
-                      // marginLeft: 20,
-                      // marginRight: 20,
-                      // borderWidth: 10,
-                      // borderColor: "white",
-                    }
-                  }>
-                  <View
-                    style={{
-                      alignSelf: 'center',
-                      backgroundColor: 'white',
-                      width: 375,
-                      borderRadius: 30,
-                    }}>
-                    <Image
-                      source={require('../../assets/images/xbox.png')}
-                      resizeMode="contain"
-                      style={{
-                        position: 'relative',
-                        width: 72,
-                        height: 72,
-                        alignSelf: 'center',
-                        marginTop: 50,
-                      }}></Image>
-                    <View style={{marginTop: 30, alignSelf: 'center'}}>
-                      <Text
-                        style={{
-                          color: '#273444',
-                          textAlign: 'center',
-                          textAlignVertical: 'center',
-                          fontSize: 20,
-                          fontFamily: 'ProximaNovaSemiBold',
-                        }}>
-                        Something went wrong 😔
-                      </Text>
-                      <Text
-                        style={{
-                          color: '#273444',
-                          textAlign: 'center',
-                          textAlignVertical: 'center',
-                          fontSize: 14,
-                          fontFamily: 'ProximaNovaReg',
-                          marginVertical: 20,
-                        }}>
-                        {this.state.message}
-                      </Text>
-                      <View
-                        style={{
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          marginBottom: 50,
-                          width: '100%',
-                        }}>
                         <TouchableOpacity
-                          onPress={() => {
-                            this.hideAlert();
-                          }}
                           style={{
-                            backgroundColor: '#FF6161',
-                            borderRadius: 30,
-                            paddingVertical: 15,
-                            width: 330,
-                            flexDirection: 'row',
                             alignItems: 'center',
-                            justifyContent: 'center',
-                            marginTop: 35,
-                            // opacity: 0.4,
+                            justifyContent: 'space-between',
+                            flexDirection: 'row',
+                            position: 'absolute',
+                            top: 10,
+                            left: 5,
                           }}>
-                          <Text
+                          <View
                             style={{
-                              color: 'white',
-                              textAlign: 'center',
-                              alignSelf: 'center',
-                              fontFamily: 'ProximaNovaReg',
+                              padding: 5,
+                              backgroundColor: '#00000030',
+                              // marginLeft: 10,
+                              borderRadius: 20,
+                              paddingHorizontal: 5,
+                              // width: "50%",
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              // opacity: 0.4
                             }}>
-                            OK
-                          </Text>
+                            <Button
+                              transparent
+                              rounded
+                              style={{
+                                backgroundColor: 'transparent',
+                                height: 30,
+                              }}>
+                              <CountDown
+                                until={Moment(
+                                  visits.drawDate,
+                                  'HH:mm:ss: A',
+                                ).diff(Moment().startOf('day'), 'seconds')}
+                                digitStyle={{
+                                  backgroundColor: 'transparent',
+                                  borderWidth: 0,
+                                }}
+                                digitTxtStyle={{color: '#fff'}}
+                                timeLabelStyle={{
+                                  color: '#fff',
+                                  fontFamily: 'ProximaNovaSemiBold',
+                                  marginTop: -10,
+                                }}
+                                separatorStyle={{color: '#fff'}}
+                                timeToShow={['H', 'M', 'S']}
+                                timeLabels={{
+                                  h: 'Hrs',
+                                  m: 'Mins',
+                                  s: 'Secs',
+                                }}
+                                showSeparator
+                                size={13}
+                              />
+                            </Button>
+                          </View>
+                          {visits.drawMode === 'Multiple' && (
+                            // <TouchableWithoutFeedback>
+                            // <TouchableOpacity
+                            //   style={{ zIndex: 1 }}
+                            //   activeOpacity={0.9}
+                            //   onPress={() =>
+                            //     this.setState({ multipleTakes: true })
+                            //   }
+                            // >
+                            //   <Image
+                            //     source={require("../../../assets/images/stacks.png")}
+                            //     style={{
+                            //       height: 30,
+                            //       width: 30,
+                            //       left: 200,
+                            //     }}
+                            //   />
+                            // </TouchableOpacity>
+                            <Button
+                              transparent
+                              rounded
+                              style={{
+                                backgroundColor: 'transparent',
+                                // height: 40,
+                                // width: 40,
+                                left: 160,
+                                zIndex: 1,
+                              }}
+                              onPress={() =>
+                                this.setState({multipleTakes: true})
+                              }>
+                              <TouchableOpacity
+                                style={{zIndex: 1}}
+                                activeOpacity={0.9}
+                                onPress={() =>
+                                  this.setState({
+                                    multipleTakes: true,
+                                  })
+                                }>
+                                <Image
+                                  source={require('../../assets/images/stacks.png')}
+                                  style={{
+                                    height: 30,
+                                    width: 30,
+                                  }}
+                                />
+                              </TouchableOpacity>
+                            </Button>
+                            // </TouchableWithoutFeedback>
+                          )}
                         </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
-            </Modal>
-
-            <Modal
-              animationType="slide"
-              transparent={false}
-              visible={this.state.showPay}
-              onRequestClose={() => {}}>
-              <View style={{marginTop: 300, backgroundColor: 'white'}}>
-                <View>
-                  <Text
-                    style={{
-                      color: 'black',
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                    }}>
-                    Please Add a default card to complete this payment
-                  </Text>
-                  <Button
-                    block
-                    rounded
-                    style={styles.bottonStyle}
-                    onPress={() => {
-                      this.hidePay();
-                    }}>
-                    <Text
-                      style={{
-                        color: 'white',
-                        textAlign: 'center',
-                        alignSelf: 'center',
-                      }}>
-                      OK
-                    </Text>
-                  </Button>
-                </View>
-              </View>
-            </Modal>
-
-            <Modal
-              animationType="slide"
-              transparent={true}
-              visible={this.state.Spinner}
-              onRequestClose={() => {}}>
-              <View style={{marginTop: 300}}>
-                <View>
-                  <Spinner color="red" />
-                </View>
-              </View>
-            </Modal>
-
-            <Modal
-              animationType="slide"
-              transparent={false}
-              visible={this.state.showYes}
-              onRequestClose={() => {}}>
-              <View style={{marginTop: 100, alignSelf: 'center'}}>
-                <Image
-                  source={yes}
-                  resizeMode="contain"
-                  style={styles.imageLogo3}></Image>
-                <View style={{marginTop: 10, alignSelf: 'center'}}>
-                  <Text
-                    style={{
-                      color: 'black',
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      fontSize: 20,
-                      fontWeight: 'bold',
-                    }}>
-                    National Uptake
-                  </Text>
-                  <Text
-                    style={{
-                      color: 'black',
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      fontWeight: 'bold',
-                      marginTop: 10,
-                    }}>
-                    What you believe is what you get
-                  </Text>
-                  <Text
-                    style={{
-                      color: 'black',
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      marginTop: 10,
-                      marginRight: 10,
-                      marginLeft: 10,
-                      fontSize: 12,
-                    }}>
-                    Great stuff! You have claimed your win 🙌 One of our lovely
-                    reps will reach out to you on the phone number on your
-                    profile within the next 2-24 hours.Please verify that this
-                    number is correct and still active. Update it if it isnt.
-                  </Text>
-                  <Button
-                    block
-                    rounded
-                    style={styles.bottonStyle}
-                    onPress={() => {
-                      this.hideYes();
-                    }}>
-                    <Text
-                      style={{
-                        color: 'white',
-                        textAlign: 'center',
-                        alignSelf: 'center',
-                      }}>
-                      Okay, got it.
-                    </Text>
-                  </Button>
-                </View>
-              </View>
-            </Modal>
-
-            <Modal
-              animationType="slide"
-              transparent={false}
-              visible={this.state.showNo}
-              onRequestClose={() => {}}>
-              <View style={{marginTop: 200, alignSelf: 'center'}}>
-                <Image
-                  source={no}
-                  resizeMode="contain"
-                  style={styles.imageLogo3}></Image>
-                <View style={{marginTop: 30, alignSelf: 'center'}}>
-                  <Text
-                    style={{
-                      color: 'black',
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      fontSize: 20,
-                      fontWeight: 'bold',
-                    }}>
-                    Something went wrong
-                  </Text>
-                  <Text
-                    style={{
-                      color: 'black',
-                      textAlign: 'center',
-                      textAlignVertical: 'center',
-                      marginTop: 10,
-                    }}>
-                    There was an error when adding your card, Please check your
-                    details again and try again
-                  </Text>
-                  <Button
-                    block
-                    rounded
-                    style={styles.bottonStyle}
-                    onPress={() => {
-                      this.hideNo();
-                    }}>
-                    <Text
-                      style={{
-                        color: 'white',
-                        textAlign: 'center',
-                        alignSelf: 'center',
-                      }}>
-                      OK
-                    </Text>
-                  </Button>
-                </View>
-              </View>
-            </Modal>
-          </Container>
+            </View>
+          </ScrollView>
         );
       } else {
         return (

@@ -43,12 +43,6 @@ class Confirm extends Component {
     };
   }
 
-  componentWillMount() {
-    BackHandler.addEventListener("hardwareBackPress", () =>
-    this.props.navigation.goBack()
-    );
-  }
-
   async loginRequest() {
     this.setState({ Spinner: true });
 

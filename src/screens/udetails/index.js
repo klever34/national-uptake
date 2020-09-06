@@ -68,7 +68,7 @@ class Udetails extends Component {
     super(props);
     this.state = {
       image: '',
-      baseURL: 'http://oftencoftdevapi-test.us-east-2.elasticbeanstalk.com',
+      baseURL: 'https://dragonflyapi.nationaluptake.com/',
       message: '',
       default_message: 'Please check your internet connection',
       showAlert: false,
@@ -113,11 +113,20 @@ class Udetails extends Component {
       chosenItemActive: false,
       discount: 0,
       defaultAmount: null,
+      discountAmount: 0,
+      loadPayStackModal: false,
+      uuidValue: null,
+      multipleTakes: false,
+      promoError: null,
+      blueTick: null,
     };
   }
 
   async componentDidMount() {
     await this.getToken();
+    let uuidRef = this.uuidv4();
+    this.setState({uuidValue: uuidRef});
+    console.log(this.state.uuidValue);
     const vm = this;
     NetInfo.addEventListener((state) => {
       console.log(state.isConnected);
@@ -140,14 +149,26 @@ class Udetails extends Component {
         let uptakes = results[0].data.draw;
         let items = results[0].data.draw.items;
         this.setState({uptakes: uptakes});
+        this.setState({drawId: uptakes.drawId});
         this.setState({items: items});
-        // console.log(results[3].data);
+        console.log(results[2].data);
+        console.log('promo data');
         this.setState({promotionalData: results[2].data});
-        this.setState({discountData: results[3].data});
-        console.log(results[3].data);
+        this.setState({discountData: results[3].data.data});
+
+        // console.log(results[2].data);
+        if (this.state.discountData !== null) {
+          // this.setState({discountAmount: results[3].data.data.value});
+          this.setDiscountAmount(results[3].data.data.value);
+        } else {
+          this.setState({buttonAmount: this.state.uptakes.ticketAmount});
+        }
+        console.log(results[3].data.data);
         this.setState({creditBagData: results[4].data});
-        this.setInitialAmount();
+        // this.setInitialAmount();
         if (results[1].data.status === 'success') {
+          console.log('carda');
+          console.log(results[1].data.data);
           this.setState({cards: results[1].data.data});
         } else {
           this.showAlert();
@@ -168,28 +189,43 @@ class Udetails extends Component {
   }
 
   async setDiscountAmount(amt) {
+    console.log(amt);
+    this.setState({blueTick: amt});
+
+    var initialTotalPrice = this.state.uptakes.ticketAmount * this.state.value;
+
+    var discount = (amt / 100) * initialTotalPrice;
+    console.log('in set discount => ' + discount);
+
+    var currentTotalPrice = initialTotalPrice - discount;
+    console.log(currentTotalPrice);
+    this.setState({discountAmount: discount});
+
     this.setState({
-      buttonAmount:
-        this.state.uptakes.ticketAmount * this.state.value * (amt / 100),
+      buttonAmount: currentTotalPrice,
     });
   }
 
-  async setPaystackAmount() {
-    this.setState({
-      buttonAmount: this.state.uptakes.ticketAmount * this.state.value,
-    });
-  }
+  // async setPaystackAmount() {
+  //   this.setState({
+  //     buttonAmount: this.state.uptakes.ticketAmount * this.state.value,
+  //   });
+  // }
 
-  async setCodeAmount() {
-    this.setState({
-      buttonAmount: this.state.uptakes.ticketAmount * this.state.value,
-    });
-  }
+  // async setCodeAmount() {
+  //   this.setState({
+  //     buttonAmount: this.state.uptakes.ticketAmount * this.state.value,
+  //   });
+  // }
 
   async getPromoCode(text) {
     // this.setState({ code: text });
-    if (text.length < 8) return;
+    if (text.length === 0) {
+      this.setState({promoError: null});
+    }
+    if (text.length < 11) return;
     this.setState({codeIndicator: true});
+
     try {
       const token = await AsyncStorage.getItem('user_token');
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -205,13 +241,20 @@ class Udetails extends Component {
         this.setState({showRefer: true});
         this.setState({showPromo: false});
       }
+      this.setState({promoError: null});
       this.setDiscountAmount(promoData.value);
       this.choseonOption('Code');
       this.setState({promoData: promoData});
       console.log(this.state.promoData);
       this.setState({codeIndicator: false});
+      this.setState({promoError: null});
+      this.setState({codeIndicator: false});
     } catch (error) {
-      console.log(error);
+      this.setState({promoError: error.response.data.responseMessage});
+      this.setState({showRefer: false});
+      this.setState({codeIndicator: false});
+      this.setState({showPromo: false});
+      // this.setState({promoData: null});
     }
   }
 
@@ -239,12 +282,13 @@ class Udetails extends Component {
   };
 
   _upTake = async () => {
+    console.log('1');
     const token = await AsyncStorage.getItem('user_token');
     // this.setState({ Spinner: true });
 
     return axios({
       method: 'GET',
-      url: `${this.state.baseURL}/api/draws/getdraw/${this.state.userData.userid}/${this.state.drawId}`,
+      url: `${this.state.baseURL}/api/draws/getdraw/${this.state.drawId}/${this.state.userData.userid}`,
       params: {},
       headers: {
         Authorization: `Bearer ${token}`,
@@ -257,6 +301,7 @@ class Udetails extends Component {
   _creditBag = async () => {
     const token = await AsyncStorage.getItem('user_token');
     // this.setState({ Spinner: true });
+    console.log('5');
 
     return axios({
       method: 'GET',
@@ -325,30 +370,29 @@ class Udetails extends Component {
       }
     }
   }
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener('hardwareBackPress', () =>
-      this.props.navigation.goBack(),
-    );
-  }
 
   choseonOption = (item) => {
     this.setState({chosenItem: item});
     this.setState({chosenItemActive: true});
-    this.RBSheet.close();
   };
+
   async initializePaystack() {
-    // console.log(this.state.uptakes.ticketAmount);
-    // console.log(this.state.value);
-    // console.log(this.state.discountData.data.value )
-    // console.log(this.state.uptakes.ticketAmount);
-    console.log(this.state.chosenItem);
     var totalMoney = 0;
     if (!this.state.chosenItemActive) {
       this.setState({showAlert: true});
-      this.setState({message: "You haven't chosen a payment plan"});
+      this.setState({message: "You haven't chosen a payment method"});
       return;
     }
+    // let total;
     this.setState({payIndicator: true});
+    // if(this.discountData.data){
+    //   let disc =
+    //   (this.state.discountData.data.value / 100) * this.state.buttonAmount;
+    //  total = this.state.buttonAmount - disc;
+    // }
+    // else {
+    //   total = this.state.buttonAmount;
+    // }
     // try {
     //   if (this.state.discountData.data !== null) {
     //     var res =
@@ -411,7 +455,8 @@ class Udetails extends Component {
             code: '',
             codeType: '',
             paymentOption: 2,
-            reference: '',
+            reference: this.state.uuidValue,
+            discount: this.state.discountAmount,
           };
           const token = await AsyncStorage.getItem('user_token');
           const res = await axios.post(
@@ -425,12 +470,14 @@ class Udetails extends Component {
           );
 
           if (res.data.status == 'success') {
-            // console.log("successful");
+            console.log(this.state.uuidValue);
             this.props.navigation.push('Web', {
-              email: this.state.cards.email,
+              email: this.state.userData.email,
               amount: this.state.buttonAmount,
               page: 'Details',
+              reference: this.state.uuidValue,
             });
+            // this.setState({loadPayStackModal: true});
             this.setState({payIndicator: false});
           } else {
             this.setState({message: error.res.data.responseMessage});
@@ -476,10 +523,11 @@ class Udetails extends Component {
           code: '',
           codeType: '',
           paymentOption: 1,
-          reference: null,
+          reference: this.state.uuidValue,
+          discount: this.state.discountAmount,
         };
 
-        // console.log(drawData);
+        console.log(drawData);
         try {
           const token = await AsyncStorage.getItem('user_token');
           const res = await axios.post(
@@ -493,9 +541,11 @@ class Udetails extends Component {
           );
           console.log(res.data);
           if (res.data.status == 'success') {
-            this.setState({showSuccess: true});
+            // this.setState({showSuccess: true});
             // this.setState({ message: res.data.responseMessage });
-            this.props.navigation.navigate('Invoice');
+            this.props.navigation.navigate('Invoice', {
+              ref: this.state.uuidValue,
+            });
             this.setState({payIndicator: false});
           } else {
             this.setState({message: error.response.data.responseMessage});
@@ -525,7 +575,7 @@ class Udetails extends Component {
             authorization_code: this.state.cards.authorizationCode,
           },
         );
-        console.log(response.data);
+        // console.log(response.data);
         // return;
         if (response.data.data.status == 'success') {
           let drawData = {
@@ -538,9 +588,10 @@ class Udetails extends Component {
             codeType: '',
             paymentOption: 3,
             reference: response.data.data.reference,
+            discount: this.state.discountAmount,
           };
 
-          console.log(drawData);
+          // console.log(drawData);
           try {
             const token = await AsyncStorage.getItem('user_token');
             const res = await axios.post(
@@ -557,7 +608,9 @@ class Udetails extends Component {
               // console.log("successful");
               // this.setState({ showSuccess: true });
               // this.setState({ message: res.data.responseMessage });
-              this.props.navigation.navigate('Invoice');
+              this.props.navigation.navigate('Invoice', {
+                ref: response.data.data.reference,
+              });
             }
             this.setState({payIndicator: false});
           } catch (error) {
@@ -633,6 +686,15 @@ class Udetails extends Component {
       }
     }
   }
+  uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (
+      c,
+    ) {
+      var r = (Math.random() * 16) | 0,
+        v = c == 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
 
   async paidUptake() {
     // this.setState({ Spinner: true });
@@ -673,6 +735,7 @@ class Udetails extends Component {
 
   _getCardRequest = async () => {
     // this.setState({ Spinner: true });
+    console.log('2');
 
     const token = await AsyncStorage.getItem('user_token');
     return axios({
@@ -687,6 +750,7 @@ class Udetails extends Component {
 
   _calculateDiscount = async () => {
     // this.setState({ Spinner: true });
+    console.log('4');
 
     const token = await AsyncStorage.getItem('user_token');
     return axios({
@@ -700,10 +764,11 @@ class Udetails extends Component {
   };
 
   _getPromoEnteries = async () => {
+    console.log(`${this.state.userData.userid}/${this.state.drawId}`);
     const token = await AsyncStorage.getItem('user_token');
     return axios({
       method: 'GET',
-      url: `${this.state.baseURL}/api/payment/promoentries/${this.state.userData.userid}`,
+      url: `${this.state.baseURL}/api/payment/promoentries/${this.state.userData.userid}/${this.state.drawId}`,
       params: {},
       headers: {
         Authorization: `Bearer ${token}`,
@@ -735,7 +800,8 @@ class Udetails extends Component {
     this.setState({
       value: preVal,
     });
-    let data = this.state.defaultAmount * preVal;
+    let data =
+      preVal * this.state.uptakes.ticketAmount - this.state.discountAmount;
     this.setState({buttonAmount: data});
   };
 
@@ -746,7 +812,8 @@ class Udetails extends Component {
     this.setState({
       value: preVal,
     });
-    let data = this.state.defaultAmount * preVal;
+    let data =
+      preVal * this.state.uptakes.ticketAmount - this.state.discountAmount;
     this.setState({buttonAmount: data});
   };
 
@@ -798,16 +865,6 @@ class Udetails extends Component {
       }
     };
 
-    const uuidv4 = () => {
-      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (
-        c,
-      ) {
-        var r = (Math.random() * 16) | 0,
-          v = c == 'x' ? r : (r & 0x3) | 0x8;
-        return v.toString(16);
-      });
-    };
-
     if (this.state.networkStatus) {
       if (this.state.showView) {
         return (
@@ -845,24 +902,25 @@ class Udetails extends Component {
                 />
               </TouchableOpacity>
 
-              <Right>
-                {/* <TouchableOpacity
-                onPress={() => this.props.navigation.goBack()}
-                style={{
-                  height: 40,
-                  width: 40,
-                  borderRadius: 40,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#555558",
-                }}
-              >
-                <Image
-                  source={require("../../../assets/chatt.png")}
-                  style={{ height: 23, width: 23 }}
-                />
-              </TouchableOpacity> */}
-              </Right>
+              {this.state.uptakes.items.length > 1 && (
+                <Right>
+                  <TouchableOpacity
+                    onPress={() => this.setState({multipleTakes: true})}
+                    style={{
+                      height: 40,
+                      width: 40,
+                      borderRadius: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#555558',
+                    }}>
+                    <Image
+                      source={require('../../assets/images/stacks.png')}
+                      style={{height: 30, width: 30}}
+                    />
+                  </TouchableOpacity>
+                </Right>
+              )}
             </View>
 
             <View
@@ -920,19 +978,40 @@ class Udetails extends Component {
                   shadowColor: 'white',
                   flex: 1,
                 }}>
-                <Button
-                  transparent
-                  rounded
+                <Text
+                  style={[
+                    {
+                      fontFamily: 'ProximaNovaSemiBold',
+                      alignItems: 'flex-start',
+                      fontWeight: '400',
+                      fontSize: 20,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      // marginTop: 10,
+                    },
+                  ]}>
+                  Draw end date
+                </Text>
+                <Text
                   style={{
-                    backgroundColor: '#00000030',
-                    height: 30,
-                    marginTop: -10,
-                    marginLeft: 10,
+                    color: '#FF6161',
+                    fontSize: 12,
+                    fontFamily: 'ProximaNovaSemiBold',
+                    paddingLeft: 10,
                   }}>
-                  <Text style={{color: '#FFFFFF', fontSize: 12}}>
-                    {Moment(this.state.uptakes.drawDate).format('hh : mm : ss')}
-                  </Text>
-                </Button>
+                  {Moment(this.state.uptakes.drawDate).format(
+                    'dddd, MMMM Do YYYY',
+                  )}
+                </Text>
+                <Text
+                  style={{
+                    color: '#FF6161',
+                    fontSize: 12,
+                    fontFamily: 'ProximaNovaSemiBold',
+                    paddingLeft: 10,
+                  }}>
+                  {Moment(this.state.uptakes.drawDate).format('h:mm:ss a')}
+                </Text>
                 <Text
                   style={[
                     {
@@ -1058,6 +1137,10 @@ class Udetails extends Component {
                             color: 'white',
                             fontSize: 20,
                             fontFamily: 'ProximaNovaBold',
+                            textDecorationLine:
+                              this.state.uptakes.type === 'Promotional'
+                                ? 'line-through'
+                                : 'none',
                           }}>
                           ₦{this.state.uptakes.ticketAmount}
                         </Text>
@@ -1223,247 +1306,525 @@ class Udetails extends Component {
                         paddingHorizontal: 10,
                         paddingVertical: 5,
                         marginTop: 10,
+                        marginBottom: 20
                       },
                     ]}>
                     Payment Option
                   </Text>
 
-                  <View style={{marginTop: -15}}>
-                    <List>
-                      {this.state.cards != null &&
-                      this.state.chosenItem === 'Choose Payment Option' ? (
-                        <ListItem
-                          style={[styles.selectStyle, {marginBottom: 15}]}
-                          onPress={() => this.RBSheet.open()}>
-                          <Left style={{paddingVertical: 3}}>
-                            <Text
-                              style={{
-                                fontSize: 16,
-                                marginLeft: 13,
-                                fontFamily: 'ProximaNovaReg',
-                              }}>
-                              {this.state.chosenItem}
-                            </Text>
-                          </Left>
-                          <Right>
-                            <AntDesign
-                              name={'downcircleo'}
-                              color={'#000'}
-                              style={{fontSize: 16}}
-                              onPress={() => this.RBSheet.open()}
-                            />
-                          </Right>
-                        </ListItem>
-                      ) : (
-                        <View></View>
-                      )}
-                      {this.state.chosenItem === 'Credit Bag' && (
-                        <TouchableOpacity
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: '#5B9DEE10',
-                            justifyContent: 'space-between',
-                            padding: 10,
-                            // marginHorizontal: 10,
-                            borderRadius: 30,
-                            paddingHorizontal: 15,
-                            marginTop: 20,
-                            paddingVertical: 15,
-                          }}
-                          onPress={() => this.RBSheet.open()}>
-                          <View
-                            style={{
-                              paddingHorizontal: 5,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              opacity:
-                                this.state.uptakes.type === 'Promotional'
-                                  ? 0.3
-                                  : 1,
-                            }}>
-                            <Image
-                              style={{}}
-                              source={require('../../assets/images/coinss.png')}
-                              style={{
-                                marginLeft: 10,
-                                marginRight: 8,
-                                height: 30,
-                                width: 30,
-                              }}></Image>
-                            <View>
-                              <Text
-                                style={{
-                                  fontSize: 14,
-                                  fontFamily: 'ProximaNovaSemiBold',
-                                  marginTop: 3,
-                                }}>
-                                Credit bag
-                              </Text>
-                              <Text
-                                style={{
-                                  fontSize: 12,
-                                  fontFamily: 'ProximaNovaReg',
-                                }}>
-                                ₦{this.state.creditBagData.data}
-                              </Text>
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      )}
-                      {this.state.chosenItem === 'Paystack' && (
-                        <TouchableOpacity
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: '#5B9DEE10',
-                            // justifyContent: "space-between",
-                            padding: 10,
-                            // marginHorizontal: 10,
-                            borderRadius: 30,
-                            paddingHorizontal: 20,
-                            marginTop: 20,
-                            paddingVertical: 15,
-                            opacity:
-                              this.state.uptakes.type === 'Promotional'
-                                ? 0.3
-                                : 1,
-                          }}
-                          onPress={() => this.RBSheet.open()}>
-                          <Image
-                            source={require('../../assets/images/card.png')}
-                            style={{
-                              height: 20,
-                              width: 20,
-                              resizeMode: 'contain',
-                              marginLeft: 15,
-                            }}
-                          />
-
+                  {this.state.uptakes.type === 'Promotional' && (
+                    <View style={{alignItems: 'center', justifyContent: 'center'}}>
+                      <TouchableOpacity
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#5B9DEE10',
+                        padding: 10,
+                        // marginHorizontal: 10,
+                        // height: '40%',
+                        width: '97%',
+                        borderRadius: 30,
+                        paddingHorizontal: 30,
+                        paddingVertical: 13,
+                        marginVertical: 10,
+                        marginBottom: 20,
+                        marginLeft: -5,
+                        justifyContent: 'space-between',
+                        opacity: this.state.uptakes.type === 'Paid' ? 0.3 : 1,
+                      }}
+                      onPress={() => this.RBSheet.open()}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}>
+                        <Image
+                          source={require('../../assets/images/ticket_red.png')}
+                          style={{height: 15, width: 30, marginVertical: 10}}
+                        />
+                        <View style={{paddingHorizontal: 15}}>
                           <Text
                             style={{
-                              fontSize: 14,
+                              color: '#323F50',
+                              fontSize: 16,
                               fontFamily: 'ProximaNovaSemiBold',
-                              marginLeft: 10,
                             }}>
-                            Pay with Card/Bank/USSD
+                            Promo Entries
                           </Text>
-                        </TouchableOpacity>
-                      )}
-                      {this.state.chosenItem === 'Saved Card' && (
-                        <TouchableOpacity
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: '#5B9DEE10',
-                            justifyContent: 'space-between',
-                            padding: 10,
-                            // marginHorizontal: 10,
-                            borderRadius: 30,
-                            paddingHorizontal: 15,
-                            marginTop: 20,
-                            paddingVertical: 15,
-                          }}
-                          onPress={() => this.RBSheet.open()}>
-                          {/* <View
-                    style={{
-                      paddingHorizontal: 5,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Image
-                      style={{}}
-                      source={cardi}
-                      style={{ marginLeft: 10, marginRight: 20 }}
-                    ></Image>
-                    <Text
-                      style={{
-                        fontSize: 20,
-                        fontFamily: "ProximaNovaSemiBold",
-                        marginTop: 3,
-                      }}
-                    >
-                      * * * *{" "}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontFamily: "ProximaNovaSemiBold",
-                      }}
-                    >
-                      {this.state.cards.last4}
-                    </Text>
-                  </View> */}
-
                           <View
                             style={{
                               flexDirection: 'row',
                               alignItems: 'center',
-                              justifyContent: 'space-between',
-                              opacity:
-                                this.state.uptakes.type === 'Promotional'
-                                  ? 0.3
-                                  : 1,
                             }}>
+                            <Text
+                              style={{
+                                color: '#323F50',
+                                fontSize: 16,
+                                fontFamily: 'ProximaNovaReg',
+                              }}>
+                              {/* Expires {Moment(promo.validUntil).format("hh:mm:ss a")} */}
+                              {this.state.promotionalData.data} Entries
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <AntDesign
+                        name={'downcircleo'}
+                        color={'#000'}
+                        style={{fontSize: 15}}
+                        // onPress={() => {
+                        //   this.state.uptakes.type === 'Promotional'
+                        //     ? null
+                        //     : this.addValue();
+                        // }}
+                      />
+                      {/* <View
+                        style={[
+                          styles.radioButtonHolder,
+                          {height: 20, width: 20, borderColor: '#fff'},
+                        ]}>
+                        <View
+                          style={[
+                            styles.radioIcon,
+                            {
+                              height: 10,
+                              width: 10,
+                              backgroundColor:
+                                this.state.uptakes.type === 'Promotional'
+                                  ? '#2ba2d3'
+                                  : '#fff',
+                            },
+                          ]}
+                        />
+                      </View> */}
+                    </TouchableOpacity>
+                      </View>
+                  )}
+
+                  {this.state.uptakes.type !== 'Promotional' && <View
+                    style={{alignItems: 'center', justifyContent: 'center'}}>
+                    {this.state.chosenItem === 'Choose Payment Option' || this.state.chosenItem === 'Code'  ? (<TouchableOpacity
+                    onPress={() => this.RBSheet.open()}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderRadius: 30,
+                        backgroundColor: '#5B9DEE10',
+                        padding: 15,
+                        paddingHorizontal: 0,
+                        width: '97%',
+                        marginBottom: this.state.chosenItem === 'Code' ? 10 : 30
+                      }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          marginLeft: 13,
+                          fontFamily: 'ProximaNovaReg',
+                        }}>
+                        {this.state.chosenItem}
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: -30
+                        }}>
+                          {this.state.discountAmount === 0 ? (
+                                <Text></Text>
+                              ) :
+                        <View
+                          style={{
+                            backgroundColor: '#5B9DEE',
+                            borderRadius: 14,
+                            padding: 6,
+                            marginRight: 10,
+                            width: '43%',
+                            alignItems: 'center',
+                          }}>
+                          <Text
+                            style={{
+                              color: '#fff',
+                              fontFamily: 'ProximaNovaSemiBold',
+                              fontSize: 10,
+                            }}>
+                            30% Discount
+                          </Text>
+                        </View>}
+                        <AntDesign
+                          name={'downcircleo'}
+                          color={'#000'}
+                          style={{fontSize: 16, marginLeft: this.state.discountAmount === 0 ? -100 : 0}}
+                          onPress={() => this.RBSheet.open()}
+                        />
+                      </View>
+                    </TouchableOpacity>): (
+                          <View></View>
+                        )}
+                        {this.state.chosenItem === 'Credit Bag' && (
+                          <TouchableOpacity
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: '#5B9DEE10',
+                              justifyContent: 'space-between',
+                              padding: 10,
+                              width: '97%',
+                              borderRadius: 33,
+                              paddingHorizontal: 5,
+                              // marginTop: 10,
+                              marginBottom: 30,
+                              paddingVertical: 14,
+                            }}
+                            onPress={() => this.RBSheet.open()}>
                             <View
                               style={{
                                 paddingHorizontal: 5,
                                 flexDirection: 'row',
                                 alignItems: 'center',
+                                justifyContent: 'space-between',
+
+                                opacity:
+                                  this.state.uptakes.type === 'Promotional'
+                                    ? 0.3
+                                    : 1,
+                              }}>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                }}>
+                                <Image
+                                  style={{}}
+                                  source={require('../../assets/images/coinss.png')}
+                                  style={{
+                                    marginLeft: 10,
+                                    marginRight: 8,
+                                    height: 30,
+                                    width: 30,
+                                  }}></Image>
+                                <View>
+                                  <Text
+                                    style={{
+                                      fontSize: 14,
+                                      fontFamily: 'ProximaNovaSemiBold',
+                                      marginTop: 3,
+                                    }}>
+                                    Credit bag
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: 12,
+                                      fontFamily: 'ProximaNovaReg',
+                                    }}>
+                                    ₦{this.state.creditBagData.data}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                // paddingRight: 3,
+                                marginRight: 5,
+                              }}>
+                              {this.state.discountAmount === 0 ? (
+                                <Text></Text>
+                              ) : (
+                                <View
+                                  style={{
+                                    backgroundColor: '#5B9DEE',
+                                    borderRadius: 14,
+                                    padding: 6,
+                                    marginRight: 7,
+                                    paddingHorizontal: 2,
+                                    paddingVertical: 5,
+                                    width: '43%',
+                                    alignItems: 'center',
+                                  }}>
+                                  <Text
+                                    style={{
+                                      color: '#fff',
+                                      fontFamily: 'ProximaNovaSemiBold',
+                                      fontSize: 10,
+                                    }}>
+                                    {this.state.blueTick}% Discount
+                                  </Text>
+                                </View>
+                              )}
+                              <AntDesign
+                                name={'downcircleo'}
+                                color={'#000'}
+                                style={{fontSize: 16, marginRight: this.state.chosenItem === 'Code' ? 0 : 20}}
+                                onPress={() => this.RBSheet.open()}
+                              />
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                        {this.state.chosenItem === 'Paystack' && (
+                          <TouchableOpacity
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: '#5B9DEE10',
+                              justifyContent: 'space-between',
+                              padding: 10,
+                              marginBottom: 30,
+                              borderRadius: 30,
+                              paddingHorizontal: 20,
+                              // marginTop: 10,
+                              paddingVertical: 19,
+                              width: '97%',
+
+                              opacity:
+                                this.state.uptakes.type === 'Promotional'
+                                  ? 0.3
+                                  : 1,
+                            }}
+                            onPress={() => this.RBSheet.open()}>
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
                                 justifyContent: 'center',
                               }}>
                               <Image
-                                style={{}}
-                                source={cardi}
+                                source={require('../../assets/images/card.png')}
                                 style={{
-                                  marginLeft: 10,
-                                  marginRight: 20,
-                                }}></Image>
+                                  height: 20,
+                                  width: 20,
+                                  resizeMode: 'contain',
+                                  marginLeft: 5,
+                                }}
+                              />
+
                               <Text
                                 style={{
-                                  fontSize: 20,
+                                  fontSize: 14,
                                   fontFamily: 'ProximaNovaSemiBold',
-                                  marginTop: 3,
+                                  marginLeft: 4,
                                 }}>
-                                * * * *{' '}
-                              </Text>
-                              <Text
-                                style={{
-                                  fontSize: 15,
-                                  fontFamily: 'ProximaNovaSemiBold',
-                                }}>
-                                {this.state.cards.last4}
+                                Pay with Card/Bank/USSD 
                               </Text>
                             </View>
-                          </View>
-                          <View
-                            style={[
-                              styles.radioButtonHolder,
-                              {height: 20, width: 20, borderColor: '#fff'},
-                            ]}>
-                            {/* {value === item ? ( */}
                             <View
-                              style={[
-                                styles.radioIcon,
-                                {
-                                  height: 10,
-                                  width: 10,
-                                  backgroundColor:
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}>
+                              {this.state.discountAmount === 0 ? (
+                                <Text></Text>
+                              ) : (
+                                <View
+                                  style={{
+                                    backgroundColor: '#5B9DEE',
+                                    borderRadius: 14,
+                                    padding: 6,
+                                    marginRight: 10,
+                                    width: '45%',
+                                    alignItems: 'center',
+                                  }}>
+                                  <Text
+                                    style={{
+                                      color: '#fff',
+                                      fontFamily: 'ProximaNovaSemiBold',
+                                      fontSize: 10,
+                                    }}>
+                                    {this.state.blueTick}% Discount
+                                  </Text>
+                                </View>
+                              )}
+                              <AntDesign
+                                name={'downcircleo'}
+                                color={'#000'}
+                                style={{fontSize: 16, marginLeft: -3}}
+                                onPress={() => this.RBSheet.open()}
+                              />
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                        {this.state.chosenItem === 'Saved Card' && (
+                          <TouchableOpacity
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: '#5B9DEE10',
+                              justifyContent: 'space-between',
+                              padding: 10,
+                              marginBottom: 30,
+                              borderRadius: 30,
+                              paddingHorizontal: 5,
+                              // marginTop: 10,
+                              paddingVertical: 16,
+                              width: '97%',
+                            }}
+                            onPress={() => this.RBSheet.open()}>
+                            {this.state.cards !== null && (
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  opacity:
                                     this.state.uptakes.type === 'Promotional'
-                                      ? '#fff'
-                                      : '#2ba2d3',
-                                },
-                              ]}
-                            />
-                            {/* ) : null} */}
-                          </View>
-                        </TouchableOpacity>
-                      )}
+                                      ? 0.3
+                                      : 1,
+                                }}>
+                                <View
+                                  style={{
+                                    paddingHorizontal: 5,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                  }}>
+                                  <Image
+                                    style={{}}
+                                    source={cardi}
+                                    style={{
+                                      marginLeft: 5,
+                                      marginRight: 10,
+                                    }}></Image>
+                                  <Text
+                                    style={{
+                                      fontSize: 20,
+                                      fontFamily: 'ProximaNovaSemiBold',
+                                      marginTop: 3,
+                                    }}>
+                                    * * * *{' '}
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      fontSize: 15,
+                                      fontFamily: 'ProximaNovaSemiBold',
+                                    }}>
+                                    {this.state.cards.last4}
+                                  </Text>
+                                </View>
+                              </View>
+                            )}
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: -25,
+                              }}>
+                              {this.state.discountAmount === 0 ? (
+                                <Text></Text>
+                              ) : (
+                                <View
+                                  style={{
+                                    backgroundColor: '#5B9DEE',
+                                    borderRadius: 14,
 
-                      {(this.state.cards.last4 === null ||
-                        this.state.cards.last4 === '') && (
+                                    marginRight: 5,
+                                    paddingHorizontal: 2,
+                                    paddingVertical: 5,
+                                    width: '42%',
+                                    alignItems: 'center',
+                                  }}>
+                                  <Text
+                                    style={{
+                                      color: '#fff',
+                                      fontFamily: 'ProximaNovaSemiBold',
+                                      fontSize: 10,
+                                    }}>
+                                    {this.state.blueTick}% Discount
+                                  </Text>
+                                </View>
+                              )}
+   
+                                <AntDesign
+                                  name={'downcircleo'}
+                                  color={'#000'}
+                                  style={{fontSize: 16, marginLeft: this.state.chosenItem === 'Code' ? -80 : -70}}
+                                  onPress={() => this.RBSheet.open()}
+                                />
+
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                  </View>}
+
+                  <View style={{marginTop: -15, width: '97%', marginLeft: 10}}>
+                    <List>
+                      {/* {this.state.uptakes.type === 'Paid' && ( */}
+                      <View>
+                        {/* {this.state.chosenItem === 'Choose Payment Option' ? (
+                          <ListItem
+                            style={[styles.selectStyle, {marginBottom: 30}]}
+                            onPress={() => this.RBSheet.open()}>
+                            <Left style={{height: 15}}>
+                              <Text
+                                style={{
+                                  fontSize: 16,
+                                  marginLeft: 13,
+                                  fontFamily: 'ProximaNovaReg',
+                                }}>
+                                {this.state.chosenItem}
+                              </Text>
+                            </Left>
+                            <Right>
+                              <View
+                                style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  marginLeft: -20,
+                                  paddingHorizontal: 2,
+                                  paddingVertical: 5,
+                                  // width: '42%',
+                                }}>
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                  }}>
+                                  {this.state.discountAmount === 0 ? (
+                                    <Text></Text>
+                                  ) : (
+                                    <View
+                                      style={{
+                                        backgroundColor: '#5B9DEE',
+                                        borderRadius: 14,
+                                        padding: 6,
+                                        marginRight: 10,
+                                        width: '80%',
+                                        alignItems: 'center',
+                                      }}>
+                                      <Text
+                                        style={{
+                                          color: '#fff',
+                                          fontFamily: 'ProximaNovaSemiBold',
+                                          fontSize: 10,
+                                        }}>
+                                        {this.state.blueTick}% Discount
+                                      </Text>
+                                    </View>
+                                  )}
+                                  <AntDesign
+                                    name={'downcircleo'}
+                                    color={'#000'}
+                                    style={{fontSize: 16}}
+                                    onPress={() => this.RBSheet.open()}
+                                  />
+                                </View>
+                              </View>
+                            </Right>
+                          </ListItem>
+                        ) : (
+                          <View></View>
+                        )} */}
+                        
+                      </View>
+                      {/* )} */}
+                      {this.state.cards === null && (
                         <ListItem
                           style={[styles.selectStyle2, {marginBottom: 20}]}
                           onPress={() =>
@@ -1546,68 +1907,77 @@ class Udetails extends Component {
                     </View>
                   </View>
                 </TouchableOpacity> */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#5B9DEE10',
-                    padding: 10,
-                    justifyContent: 'space-between',
-                    borderRadius: 30,
-                    paddingHorizontal: 10,
-                    marginTop: 10,
-                    paddingVertical: 5,
-                    opacity:
-                      this.state.uptakes.type === 'Promotional' ||
-                      this.state.discountData.data !== null
-                        ? 0.4
-                        : 1,
-                  }}>
-                  <TextInput
-                    style={{
-                      color: '#323F50',
-                      fontSize: 16,
-                      marginLeft: 10,
-                      fontFamily: 'ProximaNovaReg',
-                      width: '100%',
-                    }}
-                    onChangeText={(text) => this.getPromoCode(text)}
-                    placeholder={'Add a promo code'}
-                    editable={
-                      this.state.uptakes.type === 'Promotional' ||
-                      this.state.discountData.data !== null
-                        ? false
-                        : true
-                    }
-                  />
-                  {this.state.codeIndicator && (
-                    <ActivityIndicator
-                      size="small"
-                      color="red"
-                      style={{paddingHorizontal: 5, marginLeft: -30}}
-                    />
-                  )}
-                </TouchableOpacity>
-                {this.state.showPromo && this.state.promoData !== null && (
+                {this.state.uptakes.type === 'Paid' && (
                   <TouchableOpacity
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
                       backgroundColor: '#5B9DEE10',
                       padding: 10,
-                      // marginHorizontal: 10,
+                      justifyContent: 'space-between',
+                      borderRadius: 30,
+                      paddingHorizontal: 10,
+                      marginTop: this.state.promoData.value ? 25 : 5,
+                      paddingVertical: 5,
+                      marginHorizontal: 10,
+                      marginVertical: 10,
+                      width: '97%',
+                      marginLeft: 5,
+                      opacity:
+                        this.state.uptakes.type === 'Promotional' ||
+                        this.state.discountData !== null
+                          ? 0.4
+                          : 1,
+                    }}>
+                    <TextInput
+                      style={{
+                        color: '#323F50',
+                        fontSize: 16,
+                        marginLeft: 10,
+                        fontFamily: 'ProximaNovaReg',
+                        width: '100%',
+                      }}
+                      onChangeText={(text) => this.getPromoCode(text)}
+                      placeholder={'Add a promo code'}
+                      editable={
+                        this.state.uptakes.type === 'Promotional' ||
+                        this.state.discountData !== null
+                          ? false
+                          : true
+                      }
+                    />
+                    {this.state.codeIndicator && (
+                      <ActivityIndicator
+                        size="small"
+                        color="#FF6161"
+                        style={{paddingHorizontal: 5, marginLeft: -40}}
+                      />
+                    )}
+                  </TouchableOpacity>
+                )}
+                {this.state.showPromo && this.state.promoData !== null && (
+                  <View style={{alignItems: 'center', justifyContent: 'center'}}>
+                    <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#5B9DEE10',
+                      padding: 10,
+                      marginVertical: 10,
                       borderRadius: 30,
                       paddingHorizontal: 30,
                       paddingVertical: 13,
                       marginTop: 10,
                       justifyContent: 'space-between',
+                      width: '97%',
+                      // marginLeft: 10,
                     }}>
                     <View
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
                       }}>
-                      <View style={{paddingHorizontal: 15}}>
+                      <View style={{paddingHorizontal: 2}}>
                         <Text
                           style={{
                             color: '#323F50',
@@ -1656,69 +2026,83 @@ class Udetails extends Component {
                       />
                     </View> */}
                   </TouchableOpacity>
+                  </View>
                 )}
-                {this.state.showRefer && this.state.promoData !== null && (
-                  <TouchableOpacity
+                {this.state.promoError && (
+                  <Text
                     style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: '#5B9DEE10',
-                      padding: 10,
-                      // marginHorizontal: 10,
-                      borderRadius: 30,
-                      paddingHorizontal: 30,
-                      paddingVertical: 13,
-                      marginTop: 10,
-                      justifyContent: 'space-between',
+                      color: 'red',
+                      fontSize: 13,
+                      marginLeft: 15,
+                      fontFamily: 'ProximaNovaSemiBold',
                     }}>
-                    <View
+                    {this.state.promoError}
+                  </Text>
+                )}
+                {this.state.showRefer &&
+                  this.state.promoData !== null &&
+                  this.state.promoError === null && (
+                    <TouchableOpacity
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
+                        backgroundColor: '#5B9DEE10',
+                        padding: 10,
+                        // marginHorizontal: 10,
+                        borderRadius: 30,
+                        paddingHorizontal: 30,
+                        paddingVertical: 13,
+                        marginTop: 10,
+                        justifyContent: 'space-between',
                       }}>
-                      {this.state.promoData.profileUrl && (
-                        <Image
-                          source={{
-                            uri: this.state.promoData.profileUrl,
-                          }}
-                          style={{
-                            height: 40,
-                            width: 40,
-                            marginVertical: 10,
-                            borderRadius: 40,
-                          }}
-                        />
-                      )}
-                      {this.state.promoData.profileUrl == null && (
-                        <Image
-                          source={require('../../assets/images/robo.png')}
-                          style={{
-                            height: 30,
-                            width: 30,
-                            marginVertical: 10,
-                            borderRadius: 30,
-                          }}
-                        />
-                      )}
-                      <View style={{paddingHorizontal: 15}}>
-                        <Text
-                          style={{
-                            color: '#323F50',
-                            fontSize: 16,
-                            fontFamily: 'ProximaNovaSemiBold',
-                          }}>
-                          {this.state.promoData.value}% Discount
-                        </Text>
-                        <Text
-                          style={{
-                            color: '#323F50',
-                            fontSize: 16,
-                            fontFamily: 'ProximaNovaReg',
-                          }}>
-                          <C>{this.state.promoData.sourceName}'s</C> referral
-                          code
-                        </Text>
-                        {/* <Text
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                        }}>
+                        {this.state.promoData.profileUrl && (
+                          <Image
+                            source={{
+                              uri: this.state.promoData.profileUrl,
+                            }}
+                            style={{
+                              height: 40,
+                              width: 40,
+                              marginVertical: 10,
+                              borderRadius: 40,
+                            }}
+                          />
+                        )}
+                        {this.state.promoData.profileUrl == null && (
+                          <Image
+                            source={require('../../assets/images/robo.png')}
+                            style={{
+                              height: 30,
+                              width: 30,
+                              marginVertical: 10,
+                              borderRadius: 30,
+                            }}
+                          />
+                        )}
+                        <View style={{paddingHorizontal: 15}}>
+                          <Text
+                            style={{
+                              color: '#323F50',
+                              fontSize: 16,
+                              fontFamily: 'ProximaNovaSemiBold',
+                            }}>
+                            {this.state.promoData.value}% Discount
+                          </Text>
+                          <Text
+                            style={{
+                              color: '#323F50',
+                              fontSize: 16,
+                              fontFamily: 'ProximaNovaReg',
+                            }}>
+                            <C>{this.state.promoData.sourceName}'s</C> referral
+                            code
+                          </Text>
+                          {/* <Text
                           style={{
                             color: "#323F50",
                             fontSize: 16,
@@ -1727,11 +2111,11 @@ class Udetails extends Component {
                         >
                           Expires 22/09/2020
                         </Text> */}
+                        </View>
                       </View>
-                    </View>
-                  </TouchableOpacity>
-                )}
-                {this.state.discountData.data && (
+                    </TouchableOpacity>
+                  )}
+                {/* {this.state.discountData && (
                   <TouchableOpacity
                     style={{
                       flexDirection: 'row',
@@ -1779,48 +2163,20 @@ class Udetails extends Component {
                           <C>{this.state.discountData.data.ownerFullname}'s</C>{' '}
                           referral code
                         </Text>
-                        {/* <Text
-                          style={{
-                            color: "#323F50",
-                            fontSize: 16,
-                            fontFamily: "ProximaNovaSemiBold",
-                          }}
-                        >
-                          Expires 22/09/2020
-                        </Text> */}
+                        
                       </View>
                     </View>
-                    {/* <View
-                      style={[
-                        styles.radioButtonHolder,
-                        { height: 20, width: 20, borderColor: "#fff" },
-                      ]}
-                    >
-                      <View
-                        style={[
-                          styles.radioIcon,
-                          {
-                            height: 10,
-                            width: 10,
-                            backgroundColor:
-                              this.state.uptakes.type === "Promotional"
-                                ? "#fff"
-                                : "#2ba2d3",
-                          },
-                        ]}
-                      />
-                    </View> */}
                   </TouchableOpacity>
-                )}
+                )} */}
                 {this.state.uptakes.type === 'Promotional' ? (
                   <View
                     style={{alignItems: 'center', justifyContent: 'center'}}>
                     <TouchableOpacity
                       onPress={() => {
-                        this.payUptake();
+                        this.state.promotionalData.data > 0 ?this.payUptake() : null;
                       }}
                       style={{
-                        backgroundColor: '#FF6161',
+                        backgroundColor: this.state.promotionalData.data > 0  ? '#FF6161' : '#c4c4c4',
                         borderRadius: 30,
                         paddingVertical: 15,
                         width: '100%',
@@ -1829,6 +2185,7 @@ class Udetails extends Component {
                         justifyContent: 'center',
                         marginTop: 15,
                         marginBottom: 30,
+                        width: '97%',
                         // opacity: 0.4,
                       }}>
                       <Text
@@ -1839,7 +2196,7 @@ class Udetails extends Component {
                           fontFamily: 'ProximaNovaReg',
                         }}>
                         {this.state.uptakes.type === 'Promotional'
-                          ? 'Pay'
+                          ? 'Enter'
                           : 'Buy Ticket'}
                       </Text>
                       {this.state.showIndicator && (
@@ -1866,9 +2223,9 @@ class Udetails extends Component {
                         flexDirection: 'row',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginTop: 15,
+                        marginTop: 35,
                         marginBottom: 30,
-                        marginRight: 10,
+                        // marginRight: 10,
                         flexDirection: 'row',
                       }}>
                       <Text
@@ -1913,7 +2270,7 @@ class Udetails extends Component {
                 <View></View>
               </Content>
             </View>
-            {this.state.showBlur === true ? (
+            {/* {this.state.showBlur === true ? (
               <BlurView
                 style={styles.bluring}
                 reducedTransparencyFallbackColor="#E5E5E5"
@@ -1922,7 +2279,7 @@ class Udetails extends Component {
               />
             ) : (
               <View></View>
-            )}
+            )} */}
 
             {/* {this.state.paystackMode && (
               <View style={{ flex: 1 }}>
@@ -1948,6 +2305,106 @@ class Udetails extends Component {
                 />
               </View>
             )} */}
+            <Modal
+              animationType="slide"
+              transparent={true}
+              visible={this.state.multipleTakes}
+              onRequestClose={() => {}}>
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                }}>
+                <View
+                  style={{
+                    marginTop: 70,
+                    // marginLeft: 20,
+                    // marginRight: 20,
+                    // borderWidth: 10,
+                    // borderColor: "white",
+                  }}>
+                  <View
+                    style={{
+                      alignSelf: 'center',
+                      backgroundColor: 'white',
+                      width: 375,
+                      borderRadius: 30,
+                    }}>
+                    <Image
+                      source={require('../../assets/images/stack.png')}
+                      resizeMode="contain"
+                      style={{
+                        position: 'relative',
+                        width: 72,
+                        height: 72,
+                        alignSelf: 'center',
+                        marginTop: 50,
+                      }}></Image>
+                    <View style={{marginTop: 30, alignSelf: 'center'}}>
+                      <Text
+                        style={{
+                          color: '#273444',
+                          textAlign: 'center',
+                          textAlignVertical: 'center',
+                          fontSize: 20,
+                          fontFamily: 'ProximaNovaSemiBold',
+                        }}>
+                        Multiple uptakes
+                      </Text>
+                      <Text
+                        style={{
+                          color: '#273444',
+                          textAlign: 'center',
+                          textAlignVertical: 'center',
+                          marginTop: 20,
+                          marginLeft: 10,
+                          marginRight: 10,
+                          fontSize: 15,
+                          fontFamily: 'ProximaNovaReg',
+                          marginBottom: 10,
+                        }}>
+                        This uptake contains multiple products available to be
+                        won
+                      </Text>
+                      <View
+                        style={{
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          marginBottom: 50,
+                        }}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            this.setState({multipleTakes: false});
+                          }}
+                          style={{
+                            backgroundColor: '#FF6161',
+                            borderRadius: 30,
+                            paddingVertical: 15,
+                            width: '90%',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginTop: 15,
+                            // opacity: 0.4,
+                          }}>
+                          <Text
+                            style={{
+                              color: 'white',
+                              textAlign: 'center',
+                              alignSelf: 'center',
+                              fontFamily: 'ProximaNovaReg',
+                            }}>
+                            Okay, got it!
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </Modal>
             <Modal
               animationType="slide"
               transparent={true}
@@ -2221,9 +2678,20 @@ class Udetails extends Component {
               }}>
               <View
                 style={{
-                  marginTop: 100,
+                  // marginTop: 100,
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  // marginBottom: 40,
+                  paddingVertical: 40,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                }}>
+              <View
+                style={{
+                  // marginTop: 100,
                   alignSelf: 'center',
                   marginBottom: 40,
+                  // backgroundColor: 'rgba(0,0,0,0.5)',
                 }}>
                 <View>
                   <Image
@@ -2255,12 +2723,44 @@ class Udetails extends Component {
                   style={{fontSize: 30}}
                 />
               </Text>
+              </View>
             </Modal>
+            {this.state.loadPayStackModal && (
+              <View style={{flex: 1}}>
+                <PaystackWebView
+                  buttonText="Pay Now"
+                  paystackKey="pk_test_84373cbbe24b24215e0fd67c1d9411c649734712"
+                  paystackSecretKey="sk_test_fc780c4bc0264bd7dd194dc92afc1fb3afa37c94"
+                  amount={20000}
+                  billingEmail={this.state.userData.email}
+                  billingMobile={this.state.userData.phone}
+                  billingName={
+                    this.state.userData.firstname +
+                    ' ' +
+                    this.state.userData.lastname
+                  }
+                  ActivityIndicatorColor="green"
+                  SafeAreaViewContainer={{marginTop: 5}}
+                  SafeAreaViewContainerModal={{marginTop: 5}}
+                  handleWebViewMessage={(e) => {
+                    // handle the message
+                  }}
+                  onCancel={(e) => {
+                    // handle response here
+                  }}
+                  onSuccess={(e) => {
+                    // handle response here
+                  }}
+                  autoStart={false}
+                  refNumber={'9090909-jiiuu-98j-j09j0j00j0-09909'} // this is only for cases where you have a reference number generated
+                />
+              </View>
+            )}
             <RBSheet
               ref={(ref) => {
                 this.RBSheet = ref;
               }}
-              height={570}
+              height={450}
               openDuration={250}
               closeOnDragDown={true}
               customStyles={{
@@ -2308,7 +2808,11 @@ class Udetails extends Component {
                     marginTop: 20,
                     paddingVertical: 15,
                   }}
-                  onPress={() => this.choseonOption('Credit Bag')}>
+                  onPress={() =>
+                    this.state.uptakes.type === 'Promotional'
+                      ? null
+                      : this.choseonOption('Credit Bag')
+                  }>
                   <View
                     style={{
                       paddingHorizontal: 5,
@@ -2344,41 +2848,25 @@ class Udetails extends Component {
                       </Text>
                     </View>
                   </View>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#5B9DEE10',
-                    // justifyContent: "space-between",
-                    padding: 10,
-                    // marginHorizontal: 10,
-                    borderRadius: 30,
-                    paddingHorizontal: 20,
-                    marginTop: 20,
-                    paddingVertical: 15,
-                    opacity:
-                      this.state.uptakes.type === 'Promotional' ? 0.3 : 1,
-                  }}
-                  onPress={() => this.choseonOption('Paystack')}>
-                  <Image
-                    source={require('../../assets/images/card.png')}
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'contain',
-                      marginLeft: 15,
-                    }}
-                  />
-
-                  <Text
-                    style={{
-                      fontSize: 14,
-                      fontFamily: 'ProximaNovaSemiBold',
-                      marginLeft: 10,
-                    }}>
-                    Pay with Card/Bank/USSD
-                  </Text>
+                  <View
+                    style={[
+                      styles.radioButtonHolder,
+                      {height: 20, width: 20, borderColor: '#fff'},
+                    ]}>
+                    <View
+                      style={[
+                        styles.radioIcon,
+                        {
+                          height: 10,
+                          width: 10,
+                          backgroundColor:
+                            this.state.chosenItem === 'Credit Bag'
+                              ? '#2ba2d3'
+                              : '#fff',
+                        },
+                      ]}
+                    />
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{
@@ -2389,85 +2877,46 @@ class Udetails extends Component {
                     padding: 10,
                     // marginHorizontal: 10,
                     borderRadius: 30,
-                    paddingHorizontal: 15,
+                    paddingHorizontal: 20,
                     marginTop: 20,
-                    paddingVertical: 15,
+                    paddingVertical: 20,
                   }}
-                  onPress={() => this.choseonOption('Saved Card')}>
-                  {/* <View
-                    style={{
-                      paddingHorizontal: 5,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Image
-                      style={{}}
-                      source={cardi}
-                      style={{ marginLeft: 10, marginRight: 20 }}
-                    ></Image>
-                    <Text
-                      style={{
-                        fontSize: 20,
-                        fontFamily: "ProximaNovaSemiBold",
-                        marginTop: 3,
-                      }}
-                    >
-                      * * * *{" "}
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontFamily: "ProximaNovaSemiBold",
-                      }}
-                    >
-                      {this.state.cards.last4}
-                    </Text>
-                  </View> */}
-
+                  onPress={() =>
+                    this.state.uptakes.type === 'Promotional'
+                      ? null
+                      : this.choseonOption('Paystack')
+                  }>
                   <View
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      justifyContent: 'space-between',
                       opacity:
                         this.state.uptakes.type === 'Promotional' ? 0.3 : 1,
                     }}>
-                    <View
+                    <Image
+                      source={require('../../assets/images/card.png')}
                       style={{
-                        paddingHorizontal: 5,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        height: 20,
+                        width: 20,
+                        resizeMode: 'contain',
+                        marginLeft: 15,
+                      }}
+                    />
+
+                    <Text
+                      style={{
+                        fontSize: 14,
+                        fontFamily: 'ProximaNovaSemiBold',
+                        marginLeft: 10,
                       }}>
-                      <Image
-                        style={{}}
-                        source={cardi}
-                        style={{marginLeft: 10, marginRight: 20}}></Image>
-                      <Text
-                        style={{
-                          fontSize: 20,
-                          fontFamily: 'ProximaNovaSemiBold',
-                          marginTop: 3,
-                        }}>
-                        * * * *{' '}
-                      </Text>
-                      <Text
-                        style={{
-                          fontSize: 15,
-                          fontFamily: 'ProximaNovaSemiBold',
-                        }}>
-                        {this.state.cards.last4}
-                      </Text>
-                    </View>
+                      Pay with Card/Bank/USSD
+                    </Text>
                   </View>
                   <View
                     style={[
                       styles.radioButtonHolder,
                       {height: 20, width: 20, borderColor: '#fff'},
                     ]}>
-                    {/* {value === item ? ( */}
                     <View
                       style={[
                         styles.radioIcon,
@@ -2475,16 +2924,95 @@ class Udetails extends Component {
                           height: 10,
                           width: 10,
                           backgroundColor:
-                            this.state.uptakes.type === 'Promotional'
-                              ? '#fff'
-                              : '#2ba2d3',
+                            this.state.chosenItem === 'Paystack'
+                              ? '#2ba2d3'
+                              : '#fff',
                         },
                       ]}
                     />
-                    {/* ) : null} */}
                   </View>
                 </TouchableOpacity>
-                {this.state.cards.last4 === null && (
+                {this.state.cards !== null && (
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: '#5B9DEE10',
+                      justifyContent: 'space-between',
+                      padding: 10,
+                      // marginHorizontal: 10,
+                      borderRadius: 30,
+                      paddingHorizontal: 15,
+                      marginTop: 20,
+                      paddingVertical: 15,
+                    }}
+                    onPress={() =>
+                      this.state.uptakes.type === 'Promotional'
+                        ? null
+                        : this.choseonOption('Saved Card')
+                    }>
+                    {this.state.cards !== null && (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          opacity:
+                            this.state.uptakes.type === 'Promotional' ? 0.3 : 1,
+                        }}>
+                        <View
+                          style={{
+                            paddingHorizontal: 5,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                          <Image
+                            style={{}}
+                            source={cardi}
+                            style={{marginLeft: 10, marginRight: 20}}></Image>
+                          <Text
+                            style={{
+                              fontSize: 20,
+                              fontFamily: 'ProximaNovaSemiBold',
+                              marginTop: 3,
+                            }}>
+                            * * * *{' '}
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: 15,
+                              fontFamily: 'ProximaNovaSemiBold',
+                            }}>
+                            {this.state.cards.last4}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+                    <View
+                      style={[
+                        styles.radioButtonHolder,
+                        {height: 20, width: 20, borderColor: '#fff'},
+                      ]}>
+                      {/* {value === item ? ( */}
+                      <View
+                        style={[
+                          styles.radioIcon,
+                          {
+                            height: 10,
+                            width: 10,
+                            backgroundColor:
+                              this.state.chosenItem === 'Saved Card'
+                                ? '#2ba2d3'
+                                : '#fff',
+                          },
+                        ]}
+                      />
+                      {/* ) : null} */}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                {this.state.cards === null && (
                   <TouchableOpacity
                     style={{
                       flexDirection: 'row',
@@ -2534,7 +3062,7 @@ class Udetails extends Component {
                     />
                   </TouchableOpacity>
                 )}
-                <Text
+                {/* <Text
                   style={{
                     fontFamily: 'ProximaNovaSemiBold',
                     fontSize: 16,
@@ -2592,8 +3120,8 @@ class Udetails extends Component {
                           }}>
                           <C>{this.state.discountData.data.ownerFullname}'s</C>{' '}
                           referral code
-                        </Text>
-                        {/* <Text
+                        </Text> */}
+                {/* <Text
                           style={{
                             color: "#323F50",
                             fontSize: 16,
@@ -2602,9 +3130,9 @@ class Udetails extends Component {
                         >
                           Expires 22/09/2020
                         </Text> */}
-                      </View>
-                    </View>
-                    {/* <View
+                {/* </View> */}
+                {/* </View> */}
+                {/* <View
                       style={[
                         styles.radioButtonHolder,
                         { height: 20, width: 20, borderColor: "#fff" },
@@ -2624,79 +3152,86 @@ class Udetails extends Component {
                         ]}
                       />
                     </View> */}
-                  </TouchableOpacity>
-                )}
+                {/* </TouchableOpacity> */}
+                {/* )} */}
 
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: '#5B9DEE10',
-                    padding: 10,
-                    // marginHorizontal: 10,
-                    borderRadius: 30,
-                    paddingHorizontal: 30,
-                    paddingVertical: 13,
-                    marginTop: 20,
-                    justifyContent: 'space-between',
-                    opacity: this.state.uptakes.type === 'Paid' ? 0.3 : 1,
-                  }}>
-                  <View
+                {this.state.uptakes.type !== 'Paid' && (
+                  // <View style={{alignItems: 'center', justifyContent: 'center'}}>
+<TouchableOpacity
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
+                      backgroundColor: '#5B9DEE10',
+                      padding: 10,
+                      // marginHorizontal: 10,
+                      borderRadius: 30,
+                      paddingHorizontal: 30,
+                      paddingVertical: 13,
+                      marginTop: 20,
+                      justifyContent: 'space-between',
+                      opacity: this.state.uptakes.type === 'Paid' ? 0.3 : 1,
                     }}>
-                    <Image
-                      source={require('../../assets/images/ticket_red.png')}
-                      style={{height: 15, width: 30, marginVertical: 10}}
-                    />
-                    <View style={{paddingHorizontal: 15}}>
-                      <Text
-                        style={{
-                          color: '#323F50',
-                          fontSize: 16,
-                          fontFamily: 'ProximaNovaSemiBold',
-                        }}>
-                        Promo Entries
-                      </Text>
-                      <View
-                        style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      }}>
+                      <Image
+                        source={require('../../assets/images/ticket_red.png')}
+                        style={{height: 15, width: 30, marginVertical: 10}}
+                      />
+                      <View style={{paddingHorizontal: 15}}>
                         <Text
                           style={{
                             color: '#323F50',
                             fontSize: 16,
-                            fontFamily: 'ProximaNovaReg',
+                            fontFamily: 'ProximaNovaSemiBold',
                           }}>
-                          {/* Expires {Moment(promo.validUntil).format("hh:mm:ss a")} */}
-                          {this.state.promotionalData.data} Entries
+                          Promo Entries
                         </Text>
+                        <View
+                          style={{flexDirection: 'row', alignItems: 'center'}}>
+                          <Text
+                            style={{
+                              color: '#323F50',
+                              fontSize: 16,
+                              fontFamily: 'ProximaNovaReg',
+                            }}>
+                            {/* Expires {Moment(promo.validUntil).format("hh:mm:ss a")} */}
+                            {this.state.promotionalData.data} Entries
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                  <View
-                    style={[
-                      styles.radioButtonHolder,
-                      {height: 20, width: 20, borderColor: '#fff'},
-                    ]}>
-                    {/* {value === item ? ( */}
                     <View
                       style={[
-                        styles.radioIcon,
-                        {
-                          height: 10,
-                          width: 10,
-                          backgroundColor:
-                            this.state.uptakes.type === 'Promotional'
-                              ? '#2ba2d3'
-                              : '#fff',
-                        },
-                      ]}
-                    />
-                    {/* ) : null} */}
-                  </View>
-                </TouchableOpacity>
+                        styles.radioButtonHolder,
+                        {height: 20, width: 20, borderColor: '#fff'},
+                      ]}>
+                      <View
+                        style={[
+                          styles.radioIcon,
+                          {
+                            height: 10,
+                            width: 10,
+                            backgroundColor:
+                              this.state.uptakes.type === 'Promotional'
+                                ? '#2ba2d3'
+                                : '#fff',
+                          },
+                        ]}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  // </View>
+                )}
 
-                <View style={{justifyContent: 'center', alignItems: 'center'}}>
+                <View
+                  style={{
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginTop: 20,
+                  }}>
                   <TouchableOpacity
                     activeOpacity={0.8}
                     onPress={() => this.RBSheet.close()}

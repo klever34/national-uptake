@@ -21,7 +21,7 @@ import {
   Image,
   Modal,
   TouchableOpacity,
-  BackHandler,
+  ActivityIndicator,
 } from 'react-native';
 import {baseUrl} from '../../constants/index';
 import styles from './style';
@@ -43,6 +43,7 @@ class Login extends Component {
       message_title: '',
       Spinner: false,
       activateBtn: false,
+      indicator: false,
     };
   }
 
@@ -51,11 +52,14 @@ class Login extends Component {
   }
 
   async loginRequest() {
-    this.setState({Spinner: true});
+    console.log(this.state.email);
+    this.setState({indicator: true});
     try {
       const response = await axios.get(
         `${baseUrl}/api/auth/verifyAccount?email=${this.state.email}`,
       );
+      console.log(response.data);
+      await AsyncStorage.setItem('@reg_email', this.state.email)
       if (response.data.accountExist === true) {
         this.props.navigation.push('Password', {
           email: this.state.email,
@@ -66,7 +70,11 @@ class Login extends Component {
         });
       }
       this.setState({Spinner: false});
+      this.setState({indicator: false});
     } catch (error) {
+      console.log(error)
+      this.setState({indicator: true});
+
       this.setState({Spinner: false});
       this.setState({message: this.state.default_message});
       this.showAlert();
@@ -83,12 +91,6 @@ class Login extends Component {
     this.setState({
       showAlert: false,
     });
-  }
-
-  UNSAFE_componentWillMount() {
-    BackHandler.addEventListener('hardwareBackPress', () =>
-      this.props.navigation.goBack(),
-    );
   }
 
   render() {
@@ -209,6 +211,13 @@ class Login extends Component {
                       }}>
                       Continue
                     </Text>
+                    {this.state.indicator && (
+                      <ActivityIndicator
+                        size="small"
+                        color="#ffffff"
+                        style={{paddingHorizontal: 5, marginTop: -3}}
+                      />
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
