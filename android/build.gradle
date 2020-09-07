@@ -2,10 +2,10 @@
 
 buildscript {
     ext {
-        buildToolsVersion = "29.0.2"
+        buildToolsVersion = "28.0.2"
         minSdkVersion = 16
-        compileSdkVersion = 29
-        targetSdkVersion = 29
+        compileSdkVersion = 28
+        targetSdkVersion = 28
         googlePlayServicesVersion = "+"
         firebaseMessagingVersion = "+"
     }
@@ -43,8 +43,8 @@ subprojects {
     afterEvaluate { project ->
         if (project.hasProperty("android")) {
             android {
-                compileSdkVersion 29
-                buildToolsVersion "29.0.2"
+                compileSdkVersion 28
+                buildToolsVersion "28.0.2"
             }
         }
     }
